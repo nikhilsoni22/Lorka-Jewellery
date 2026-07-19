@@ -1,0 +1,27 @@
+{
+  "name": "lorka-jewellers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lorka Jewellers — production silver-jewellery e-commerce platform (monorepo)",
+  "packageManager": "pnpm@11.11.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "dev:api": "pnpm --filter jewellery-api dev",
+    "dev:admin": "pnpm --filter jewellery-admin dev",
+    "dev:website": "pnpm --filter jewellery-website dev",
+    "seed:admin": "pnpm --filter jewellery-api seed:admin",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  }
+}
