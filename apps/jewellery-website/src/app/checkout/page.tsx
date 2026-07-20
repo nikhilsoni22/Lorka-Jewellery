@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { toast } from 'sonner';
@@ -48,6 +48,22 @@ declare global {
 type PaymentMethod = 'razorpay' | 'cod';
 
 export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="container py-20">
+          <div className="flex justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        </main>
+      }
+    >
+      <CheckoutForm />
+    </Suspense>
+  );
+}
+
+function CheckoutForm() {
   const searchParams = useSearchParams();
   const isBuyNow = searchParams.get('mode') === 'buynow';
   const cart = useCart();
