@@ -18,6 +18,7 @@ import {
 import { env } from '../../config/env';
 import { toPublicUser } from '../users/user.service';
 import { AuditLogService, type AuditContext } from '../audit/audit-log.service';
+import { logger } from '../../common/logger/logger';
 
 export interface RequestContext {
   ip?: string;
@@ -54,7 +55,8 @@ export class AuthService {
     });
 
     await this.audit.record('auth.register', this.auditCtx(ctx, user.id));
-    await this.issueEmailOtp(user);
+    const code = await this.storeEmailOtp(user);
+    void this.sendEmailOtp(user, code);
     return this.issueSession(user, false, ctx);
   }
 
@@ -128,7 +130,9 @@ export class AuthService {
     await this.users.setResetToken(user.id, hash, expiresAt);
 
     const resetUrl = `${env.WEBSITE_URL}/reset-password?token=${raw}`;
-    await this.email.sendPasswordReset(user.email, resetUrl);
+    void this.email.sendPasswordReset(user.email, resetUrl).catch((err) => {
+      logger.error({ err, userId: user.id }, '[auth] Failed to send password reset email');
+    });
   }
 
   async resetPassword(token: string, newPassword: string, ctx: RequestContext): Promise<void> {
@@ -152,16 +156,30 @@ export class AuthService {
     const user = await this.users.findById(userId);
     if (!user) throw AppError.notFound('Account not found');
     if (user.emailVerified) throw AppError.badRequest('Email is already verified');
-    await this.issueEmailOtp(user);
+    const code = await this.storeEmailOtp(user);
+    void this.sendEmailOtp(user, code);
   }
 
   // --- helpers -------------------------------------------------------------
 
-  private async issueEmailOtp(user: UserEntity): Promise<void> {
+  /** Generates + persists a fresh OTP and returns the plaintext code — fast, local-only (DB
+   * write), safe to await from a request handler. */
+  private async storeEmailOtp(user: UserEntity): Promise<string> {
     const { code, hash } = generateOtp();
     const expiresAt = new Date(Date.now() + env.EMAIL_OTP_TTL_MIN * 60_000);
     await this.users.setEmailOtp(user.id, hash, expiresAt);
-    await this.email.sendEmailVerificationOtp(user.email, code);
+    return code;
+  }
+
+  /** Best-effort: an SMTP hiccup should never hang or fail registration/resend-OTP. Callers
+   * fire this without awaiting it (`void`) — the OTP is already stored by `storeEmailOtp`
+   * before this runs, so a slow/failed send never blocks or breaks the request. */
+  private async sendEmailOtp(user: UserEntity, code: string): Promise<void> {
+    try {
+      await this.email.sendEmailVerificationOtp(user.email, code);
+    } catch (err) {
+      logger.error({ err, userId: user.id }, '[auth] Failed to send email verification OTP');
+    }
   }
 
   private async authenticate(

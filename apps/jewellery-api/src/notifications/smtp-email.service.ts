@@ -156,6 +156,13 @@ export class SmtpEmailService implements IEmailService {
       port: env.SMTP_PORT,
       secure: env.SMTP_PORT === 465,
       auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+      // nodemailer's defaults (2 min connection/socket timeout) make a blocked/unreachable SMTP
+      // port fail slowly instead of fast — every caller here already treats send failures as
+      // best-effort, so failing in ~10s instead of ~2min matters even though nothing awaits it
+      // directly anymore.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 10_000,
     });
     this.from = env.EMAIL_FROM || env.SMTP_USER!;
   }
