@@ -19,7 +19,13 @@ export interface MaintenanceResponse {
 }
 
 export interface SettingsResponse {
+  silverRatePerKg: number;
+  goldRatePer10g: number;
   charges: ChargeResponse[];
   maintenance: MaintenanceResponse;
   notificationEmail?: string;
+  /** Only present when fetched by an authenticated admin — omitted from the public response. */
+  razorpayKeyId?: string;
+  /** Only present when fetched by an authenticated admin — omitted from the public response. */
+  razorpayKeySecret?: string;
 }

@@ -1,9 +1,11 @@
+import { MetalType } from '@lorka/types';
 import type { ProductEntity } from '../../common/interfaces/entities';
 import type {
   IProductRepository,
   ProductFilter,
   CreateProductData,
   UpdateProductData,
+  MetalRates,
   PagedResult,
   Pagination,
 } from '../../common/interfaces/repositories';
@@ -18,12 +20,13 @@ function toEntity(doc: ProductDocument): ProductEntity {
     shortDescription: doc.shortDescription,
     category: doc.category.toString(),
     sku: doc.sku,
-    price: doc.price,
-    discountPrice: doc.discountPrice ?? undefined,
+    metalType: doc.metalType as MetalType,
+    makingCharge: doc.makingCharge,
+    discountPercent: doc.discountPercent ?? undefined,
     images: doc.images,
     material: doc.material,
     purity: doc.purity,
-    weight: doc.weight ?? undefined,
+    weight: doc.weight,
     stock: doc.stock,
     isFeatured: doc.isFeatured,
     isActive: doc.isActive,
@@ -32,15 +35,17 @@ function toEntity(doc: ProductDocument): ProductEntity {
   };
 }
 
-const SORTS: Record<NonNullable<ProductFilter['sort']>, Record<string, 1 | -1>> = {
+const SORTS: Partial<Record<NonNullable<ProductFilter['sort']>, Record<string, 1 | -1>>> = {
   newest: { createdAt: -1 },
-  price_asc: { price: 1 },
-  price_desc: { price: -1 },
   name_asc: { name: 1 },
 };
 
 export class ProductRepository implements IProductRepository {
-  async list(filter: ProductFilter, pagination: Pagination): Promise<PagedResult<ProductEntity>> {
+  async list(
+    filter: ProductFilter,
+    pagination: Pagination,
+    rates: MetalRates,
+  ): Promise<PagedResult<ProductEntity>> {
     const query: Record<string, unknown> = {};
     if (filter.category) query.category = filter.category;
     if (filter.isActive !== undefined) query.isActive = filter.isActive;
@@ -48,8 +53,46 @@ export class ProductRepository implements IProductRepository {
     if (filter.search) query.name = { $regex: filter.search, $options: 'i' };
 
     const skip = (pagination.page - 1) * pagination.limit;
-    const sort = SORTS[filter.sort ?? 'newest'];
+    const sortKey = filter.sort ?? 'newest';
 
+    // price_asc/price_desc sort by the live computed price (weight × metal rate + making
+    // charge), which isn't a stored field, so it needs an aggregation instead of find().sort().
+    if (sortKey === 'price_asc' || sortKey === 'price_desc') {
+      // Silver is quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g).
+      const priceExpr = {
+        $add: [
+          {
+            $multiply: [
+              '$weight',
+              {
+                $cond: [
+                  { $eq: ['$metalType', MetalType.Gold] },
+                  { $divide: [rates.goldRatePer10g, 10] },
+                  { $divide: [rates.silverRatePerKg, 1000] },
+                ],
+              },
+            ],
+          },
+          '$makingCharge',
+        ],
+      };
+      const [result] = await ProductModel.aggregate([
+        { $match: query },
+        { $addFields: { __livePrice: priceExpr } },
+        { $sort: { __livePrice: sortKey === 'price_asc' ? 1 : -1 } },
+        {
+          $facet: {
+            items: [{ $skip: skip }, { $limit: pagination.limit }],
+            total: [{ $count: 'count' }],
+          },
+        },
+      ]).exec();
+      const docs = (result?.items ?? []) as ProductDocument[];
+      const total = result?.total?.[0]?.count ?? 0;
+      return { items: docs.map(toEntity), total };
+    }
+
+    const sort = SORTS[sortKey] ?? SORTS.newest!;
     const [docs, total] = await Promise.all([
       ProductModel.find(query)
         .sort(sort)

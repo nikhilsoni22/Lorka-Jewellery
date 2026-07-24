@@ -22,7 +22,11 @@ export function createApp(container: AppContainer = buildContainer()): Express {
   // Behind a proxy (Render/Railway/Vercel) so req.ip and secure cookies work.
   app.set('trust proxy', 1);
 
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // CSP is disabled: this API only ever serves JSON plus the static Swagger UI page at
+  // /api/v1/docs, and helmet's default script-src 'self' blocks Swagger UI's inline
+  // scripts/styles, leaving the docs page broken. CSP mainly guards browser-rendered HTML
+  // against XSS, which doesn't apply to a JSON API.
+  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(
     cors({
       origin: env.CORS_ORIGINS,
@@ -36,7 +40,8 @@ export function createApp(container: AppContainer = buildContainer()): Express {
   app.use(pinoHttp({ logger, autoLogging: env.NODE_ENV !== 'test' }));
   app.use(globalLimiter);
 
-  // Uploaded product images (served from public/uploads/products by the multer disk storage).
+  // Legacy: serves any pre-Cloudinary images still referenced from local disk. New uploads go
+  // straight to Cloudinary (see modules/upload) so they survive restarts/redeploys.
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
   mountSwagger(app, API_BASE_PATH);

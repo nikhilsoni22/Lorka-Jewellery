@@ -1,49 +1,32 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import multer from 'multer';
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../../common/errors/app-error';
 
-const PRODUCTS_UPLOAD_ROOT = path.join(process.cwd(), 'public', 'uploads', 'products');
-fs.mkdirSync(PRODUCTS_UPLOAD_ROOT, { recursive: true });
-
-const BANNERS_UPLOAD_ROOT = path.join(process.cwd(), 'public', 'uploads', 'banners');
-fs.mkdirSync(BANNERS_UPLOAD_ROOT, { recursive: true });
-
-const EXTENSION_BY_MIME: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
-};
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 const imageFileFilter = (
   _req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback,
 ): void => {
-  if (!EXTENSION_BY_MIME[file.mimetype]) {
+  if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
     cb(AppError.badRequest('Only JPG, PNG, WEBP or GIF images are allowed'));
     return;
   }
   cb(null, true);
 };
 
+// Files are buffered in memory, not written to disk — the controller streams them straight to
+// Cloudinary. The API's own disk is ephemeral on most hosts, so writing uploads there means
+// they vanish on the next restart/redeploy.
 const productsUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, PRODUCTS_UPLOAD_ROOT),
-    filename: (_req, file, cb) => cb(null, `${randomUUID()}${EXTENSION_BY_MIME[file.mimetype]}`),
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 6 },
   fileFilter: imageFileFilter,
 });
 
 const bannerUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, BANNERS_UPLOAD_ROOT),
-    filename: (_req, file, cb) => cb(null, `${randomUUID()}${EXTENSION_BY_MIME[file.mimetype]}`),
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: imageFileFilter,
 });

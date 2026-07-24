@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error';
 import { sendSuccess } from '../../common/response/api-response';
+import { uploadImageToCloudinary } from './cloudinary.client';
 
 export class UploadController {
   uploadProductImages = async (req: Request, res: Response): Promise<void> => {
@@ -9,8 +10,9 @@ export class UploadController {
       throw AppError.badRequest('At least one image file is required');
     }
 
-    const origin = `${req.protocol}://${req.get('host')}`;
-    const urls = files.map((file) => `${origin}/uploads/products/${file.filename}`);
+    const urls = await Promise.all(
+      files.map((file) => uploadImageToCloudinary(file.buffer, 'lorka-jewellers/products')),
+    );
     sendSuccess(res, { urls }, 201);
   };
 
@@ -20,8 +22,7 @@ export class UploadController {
       throw AppError.badRequest('An image file is required');
     }
 
-    const origin = `${req.protocol}://${req.get('host')}`;
-    const url = `${origin}/uploads/banners/${file.filename}`;
+    const url = await uploadImageToCloudinary(file.buffer, 'lorka-jewellers/banners');
     sendSuccess(res, { url }, 201);
   };
 }

@@ -23,9 +23,13 @@ const maintenanceSchema = new Schema(
 
 const settingsSchema = new Schema(
   {
+    silverRatePerKg: { type: Number, default: 0, min: 0 },
+    goldRatePer10g: { type: Number, default: 0, min: 0 },
     charges: { type: [chargeSchema], default: [] },
     maintenance: { type: maintenanceSchema, default: () => ({}) },
     notificationEmail: { type: String, default: '' },
+    razorpayKeyId: { type: String, default: '' },
+    razorpayKeySecret: { type: String, default: '' },
   },
   { timestamps: true },
 );

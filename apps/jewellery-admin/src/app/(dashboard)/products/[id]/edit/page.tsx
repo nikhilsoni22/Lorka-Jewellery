@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import type { CreateProductInput } from '@lorka/types';
 import { ProductForm } from '@/components/products/product-form';
 import { useProduct, useUpdateProduct } from '@/lib/hooks/products';
 
@@ -37,8 +38,9 @@ export default function EditProductPage() {
           shortDescription: product.shortDescription,
           category: product.category,
           sku: product.sku,
-          price: product.price,
-          discountPrice: product.discountPrice,
+          metalType: product.metalType as CreateProductInput['metalType'],
+          makingCharge: product.makingCharge,
+          discountPercent: product.discountPercent ?? undefined,
           images: product.images,
           material: product.material,
           purity: product.purity,

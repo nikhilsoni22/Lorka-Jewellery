@@ -14,12 +14,18 @@ export interface ProductResponse {
   category: string;
   categoryName?: string;
   sku: string;
+  metalType: string;
+  makingCharge: number;
+  /** Derived live from weight × the admin-set metal rate + makingCharge — not stored. */
   price: number;
+  /** Offer percentage (1-100) as entered by the admin; null/undefined means no active offer. */
+  discountPercent?: number | null;
+  /** Derived: price after applying discountPercent. Undefined when there's no active offer. */
   discountPrice?: number;
   images: string[];
   material: string;
   purity: string;
-  weight?: number;
+  weight: number;
   stock: number;
   isFeatured: boolean;
   isActive: boolean;

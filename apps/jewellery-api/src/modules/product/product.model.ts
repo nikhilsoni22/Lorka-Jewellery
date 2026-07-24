@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
+import { MetalType } from '@lorka/types';
 
 const productSchema = new Schema(
   {
@@ -8,12 +9,13 @@ const productSchema = new Schema(
     shortDescription: { type: String, default: '' },
     category: { type: Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
     sku: { type: String, required: true, unique: true, trim: true, index: true },
-    price: { type: Number, required: true, min: 0 },
-    discountPrice: { type: Number, default: null },
+    metalType: { type: String, enum: Object.values(MetalType), required: true, index: true },
+    makingCharge: { type: Number, required: true, min: 0, default: 0 },
+    discountPercent: { type: Number, default: null, min: 0, max: 100 },
     images: { type: [String], default: [] },
     material: { type: String, default: '' },
     purity: { type: String, default: '' },
-    weight: { type: Number, default: null },
+    weight: { type: Number, required: true, min: 0 },
     stock: { type: Number, default: 0, min: 0 },
     isFeatured: { type: Boolean, default: false, index: true },
     isActive: { type: Boolean, default: true, index: true },

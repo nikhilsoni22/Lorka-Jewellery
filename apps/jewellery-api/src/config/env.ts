@@ -21,27 +21,46 @@ const envSchema = z.object({
   RESET_TOKEN_TTL_MIN: z.coerce.number().int().positive().default(30),
   EMAIL_OTP_TTL_MIN: z.coerce.number().int().positive().default(10),
 
+  // Must list BOTH the website's and the admin panel's exact production origins (comma-separated,
+  // no trailing slash), or the browser will block every request from them.
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000,http://localhost:3001')
     .transform(csv),
   WEBSITE_URL: z.string().url().default('http://localhost:3000'),
   ADMIN_URL: z.string().url().default('http://localhost:3001'),
+  // Leave unset if the API, website, and admin panel are on unrelated domains (e.g. an
+  // onrender.com/vercel.app default) — the refresh cookie then only works via direct
+  // fetch/axios calls to the API's own origin, and browsers that block third-party cookies
+  // (Safari always; Chrome increasingly) will eventually break session persistence.
+  // Set to the shared parent domain (e.g. ".lorkajewellers.com") once the API and both
+  // frontends are deployed as subdomains of the SAME custom domain — that makes the cookie a
+  // proper first-party cookie shared across all three, immune to third-party cookie blocking.
   COOKIE_DOMAIN: z.string().optional().transform((v) => (v ? v : undefined)),
 
   SEED_ADMIN_NAME: z.string().default('Super Admin'),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
 
-  RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
-  RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
+  // Legacy: only used to seed the DB-backed setting the first time it's created. Razorpay keys
+  // are now managed from Admin → Settings, not .env — see settings.repository.ts.
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
 
-  // Gmail SMTP — leave unset in dev to fall back to logging emails to the console.
-  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  // Product/banner images are uploaded straight to Cloudinary so they survive host restarts and
+  // redeploys — the API's own disk is ephemeral on most hosts (Render included).
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME is required'),
+  CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
+  CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
+
+  // Gmail SMTP — leave unset in dev to fall back to logging emails to the console. Trimmed
+  // because a stray trailing space (easy to pick up when pasting a Gmail App Password) makes
+  // Gmail silently reject auth — the failure otherwise looks identical to "not configured".
+  SMTP_HOST: z.string().trim().default('smtp.gmail.com'),
   SMTP_PORT: z.coerce.number().int().positive().default(465),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
-  EMAIL_FROM: z.string().optional(),
+  SMTP_USER: z.string().trim().optional(),
+  SMTP_PASS: z.string().trim().optional(),
+  EMAIL_FROM: z.string().trim().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

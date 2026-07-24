@@ -1,8 +1,7 @@
 import type { CreateRazorpayOrderInput, RazorpayOrderResponse } from '@lorka/types';
 import type { IProductRepository, ISettingsRepository } from '../../common/interfaces/repositories';
 import { AppError } from '../../common/errors/app-error';
-import { env } from '../../config/env';
-import { computeCharges, sumCharges } from '../../common/utils/pricing';
+import { computeCharges, sumCharges, computeProductPrice, computeDiscountedPrice } from '../../common/utils/pricing';
 import { createRazorpayOrder } from './razorpay.client';
 
 function generateReceipt(): string {
@@ -16,7 +15,13 @@ export class PaymentService {
   ) {}
 
   async createRazorpayOrder(items: CreateRazorpayOrderInput['items']): Promise<RazorpayOrderResponse> {
+    const settings = await this.settingsRepo.get();
+    if (!settings.razorpayKeyId || !settings.razorpayKeySecret) {
+      throw AppError.badRequest('Online payment is not configured yet. Add your Razorpay keys in Settings.');
+    }
+
     const products = await Promise.all(items.map((item) => this.products.findById(item.productId)));
+    const rates = { silverRatePerKg: settings.silverRatePerKg, goldRatePer10g: settings.goldRatePer10g };
 
     let subtotal = 0;
     items.forEach((item, idx) => {
@@ -27,7 +32,8 @@ export class PaymentService {
       if (!item.isBuildOrder && product.stock < item.quantity) {
         throw AppError.conflict(`${product.name} only has ${product.stock} left in stock`);
       }
-      const unitPrice = product.discountPrice ?? product.price;
+      const livePrice = computeProductPrice(product.weight, product.makingCharge, product.metalType, rates);
+      const unitPrice = computeDiscountedPrice(livePrice, product.discountPercent) ?? livePrice;
       subtotal += unitPrice * item.quantity;
     });
 
@@ -35,18 +41,22 @@ export class PaymentService {
       throw AppError.badRequest('Order total must be greater than zero');
     }
 
-    const settings = await this.settingsRepo.get();
     const charges = computeCharges(subtotal, settings.charges);
     const total = subtotal + sumCharges(charges);
 
     const amountPaise = Math.round(total * 100);
-    const razorpayOrder = await createRazorpayOrder(amountPaise, generateReceipt());
+    const razorpayOrder = await createRazorpayOrder(
+      amountPaise,
+      generateReceipt(),
+      settings.razorpayKeyId,
+      settings.razorpayKeySecret,
+    );
 
     return {
       razorpayOrderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      keyId: env.RAZORPAY_KEY_ID,
+      keyId: settings.razorpayKeyId,
     };
   }
 }

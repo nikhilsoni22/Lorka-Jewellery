@@ -33,12 +33,18 @@ export default function SettingsPage() {
   const { data, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
 
+  const [silverRatePerKg, setSilverRatePerKg] = useState('0');
+  const [goldRatePer10g, setGoldRatePer10g] = useState('0');
   const [charges, setCharges] = useState<ChargeRow[]>([]);
   const [maintenance, setMaintenance] = useState({ enabled: false, startAt: '', endAt: '', message: '' });
   const [notificationEmail, setNotificationEmail] = useState('');
+  const [razorpayKeyId, setRazorpayKeyId] = useState('');
+  const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
 
   useEffect(() => {
     if (!data) return;
+    setSilverRatePerKg(String(data.silverRatePerKg));
+    setGoldRatePer10g(String(data.goldRatePer10g));
     setCharges(
       data.charges.map((c) => ({
         id: c.id,
@@ -55,6 +61,8 @@ export default function SettingsPage() {
       message: data.maintenance.message,
     });
     setNotificationEmail(data.notificationEmail ?? '');
+    setRazorpayKeyId(data.razorpayKeyId ?? '');
+    setRazorpayKeySecret(data.razorpayKeySecret ?? '');
   }, [data]);
 
   const addCharge = () => {
@@ -70,6 +78,14 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
+    if (Number.isNaN(Number(silverRatePerKg)) || Number(silverRatePerKg) < 0) {
+      toast.error('Enter a valid silver rate');
+      return;
+    }
+    if (Number.isNaN(Number(goldRatePer10g)) || Number(goldRatePer10g) < 0) {
+      toast.error('Enter a valid gold rate');
+      return;
+    }
     if (charges.some((c) => !c.name.trim() || Number.isNaN(Number(c.value)))) {
       toast.error('Every charge needs a name and a numeric value');
       return;
@@ -85,6 +101,8 @@ export default function SettingsPage() {
 
     updateSettings.mutate(
       {
+        silverRatePerKg: Number(silverRatePerKg),
+        goldRatePer10g: Number(goldRatePer10g),
         charges: charges.map((c) => ({
           id: c.id,
           name: c.name.trim(),
@@ -99,6 +117,8 @@ export default function SettingsPage() {
           message: maintenance.message,
         },
         notificationEmail: notificationEmail.trim() || undefined,
+        razorpayKeyId: razorpayKeyId.trim() || undefined,
+        razorpayKeySecret: razorpayKeySecret.trim() || undefined,
       },
       {
         onSuccess: () => toast.success('Settings saved'),
@@ -121,6 +141,40 @@ export default function SettingsPage() {
         <h1 className="text-3xl">Settings</h1>
         <p className="mt-1 text-muted-foreground">Extra charges and site-wide maintenance mode.</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Metal Rates</CardTitle>
+          <CardDescription>
+            Set today&apos;s rate for each metal — silver per kg, gold per 10 grams (standard
+            convention). Every product&apos;s price is calculated live as (weight in grams × rate) +
+            its making charge — changing the rate here instantly updates every product of that
+            metal, no need to edit them individually.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Silver rate (₹ per kg)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={silverRatePerKg}
+              onChange={(e) => setSilverRatePerKg(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Gold rate (₹ per 10 grams)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={goldRatePer10g}
+              onChange={(e) => setGoldRatePer10g(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -234,6 +288,46 @@ export default function SettingsPage() {
               value={maintenance.message}
               onChange={(e) => setMaintenance((m) => ({ ...m, message: e.target.value }))}
               placeholder="We'll be back shortly — thanks for your patience."
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Payment Gateway (Razorpay)</CardTitle>
+          <CardDescription>
+            Get these from your{' '}
+            <a
+              href="https://dashboard.razorpay.com/app/keys"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              Razorpay dashboard
+            </a>
+            . Leave both blank to disable online payments (customers can still pay COD, if
+            enabled). The Key Secret is never shown to anyone but an admin.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Key ID</Label>
+            <Input
+              value={razorpayKeyId}
+              onChange={(e) => setRazorpayKeyId(e.target.value)}
+              placeholder="rzp_live_xxxxxxxxxxxx"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Key Secret</Label>
+            <Input
+              type="password"
+              value={razorpayKeySecret}
+              onChange={(e) => setRazorpayKeySecret(e.target.value)}
+              placeholder="Enter to set or replace"
+              autoComplete="off"
             />
           </div>
         </CardContent>

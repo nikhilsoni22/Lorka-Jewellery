@@ -1,8 +1,9 @@
-import type { CategoryEntity, ProductEntity, BannerEntity } from '../../src/common/interfaces/entities';
+import type { CategoryEntity, ProductEntity, BannerEntity, SettingsEntity } from '../../src/common/interfaces/entities';
 import type {
   ICategoryRepository,
   IProductRepository,
   IBannerRepository,
+  ISettingsRepository,
   CategoryFilter,
   ProductFilter,
   BannerFilter,
@@ -12,6 +13,7 @@ import type {
   UpdateProductData,
   CreateBannerData,
   UpdateBannerData,
+  UpdateSettingsData,
   PagedResult,
   Pagination,
 } from '../../src/common/interfaces/repositories';
@@ -71,6 +73,7 @@ export class FakeProductRepository implements IProductRepository {
   private seq = 0;
 
   async list(filter: ProductFilter, pagination: Pagination): Promise<PagedResult<ProductEntity>> {
+    // Rates aren't needed here: this in-memory fake never sorts by the derived price field.
     let items = [...this.byId.values()];
     if (filter.category) items = items.filter((p) => p.category === filter.category);
     if (filter.isActive !== undefined) items = items.filter((p) => p.isActive === filter.isActive);
@@ -168,5 +171,34 @@ export class FakeBannerRepository implements IBannerRepository {
 
   async delete(id: string): Promise<boolean> {
     return this.byId.delete(id);
+  }
+}
+
+export class FakeSettingsRepository implements ISettingsRepository {
+  private entity: SettingsEntity = {
+    id: 'settings_1',
+    silverRatePerKg: 80000,
+    goldRatePer10g: 70000,
+    charges: [],
+    maintenance: { enabled: false, message: '' },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  async get(): Promise<SettingsEntity> {
+    return { ...this.entity };
+  }
+
+  async update(data: UpdateSettingsData): Promise<SettingsEntity> {
+    this.entity = {
+      ...this.entity,
+      silverRatePerKg: data.silverRatePerKg,
+      goldRatePer10g: data.goldRatePer10g,
+      charges: data.charges.map((c, i) => ({ id: c.id ?? `charge_${i}`, ...c })),
+      maintenance: data.maintenance,
+      notificationEmail: data.notificationEmail,
+      updatedAt: new Date(),
+    };
+    return { ...this.entity };
   }
 }

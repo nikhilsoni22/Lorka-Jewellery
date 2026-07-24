@@ -104,8 +104,14 @@ export interface ProductFilter {
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc';
 }
 
+/** Current admin-set metal rates, needed to sort/derive products by their live price. */
+export interface MetalRates {
+  silverRatePerKg: number;
+  goldRatePer10g: number;
+}
+
 export interface IProductRepository {
-  list(filter: ProductFilter, pagination: Pagination): Promise<PagedResult<ProductEntity>>;
+  list(filter: ProductFilter, pagination: Pagination, rates: MetalRates): Promise<PagedResult<ProductEntity>>;
   findById(id: string): Promise<ProductEntity | null>;
   findBySlug(slug: string): Promise<ProductEntity | null>;
   existsBySlug(slug: string, excludeId?: string): Promise<boolean>;
@@ -188,9 +194,13 @@ export interface UpdateChargeData {
 export type UpdateMaintenanceData = MaintenanceEntity;
 
 export interface UpdateSettingsData {
+  silverRatePerKg: number;
+  goldRatePer10g: number;
   charges: UpdateChargeData[];
   maintenance: UpdateMaintenanceData;
   notificationEmail?: string;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
 }
 
 export interface ISettingsRepository {

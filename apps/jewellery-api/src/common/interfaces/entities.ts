@@ -1,4 +1,12 @@
-import type { UserRole, OrderStatus, PaymentMethod, PaymentStatus, TicketStatus, ChargeType } from '@lorka/types';
+import type {
+  UserRole,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  TicketStatus,
+  ChargeType,
+  MetalType,
+} from '@lorka/types';
 
 export interface UserEntity {
   id: string;
@@ -59,12 +67,13 @@ export interface ProductEntity {
   shortDescription: string;
   category: string;
   sku: string;
-  price: number;
-  discountPrice?: number | null;
+  metalType: MetalType;
+  makingCharge: number;
+  discountPercent?: number | null;
   images: string[];
   material: string;
   purity: string;
-  weight?: number | null;
+  weight: number;
   stock: number;
   isFeatured: boolean;
   isActive: boolean;
@@ -148,9 +157,13 @@ export interface MaintenanceEntity {
 
 export interface SettingsEntity {
   id: string;
+  silverRatePerKg: number;
+  goldRatePer10g: number;
   charges: ChargeEntity[];
   maintenance: MaintenanceEntity;
   notificationEmail?: string;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
   createdAt: Date;
   updatedAt: Date;
 }

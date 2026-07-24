@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "main": "dist/main.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsup",

@@ -3,7 +3,12 @@ import { apiGet } from '@/lib/api';
 
 export default async function MaintenancePage() {
   const settings = await apiGet<SettingsResponse>('/settings', 0).catch(
-    (): SettingsResponse => ({ charges: [], maintenance: { enabled: true, message: '' } }),
+    (): SettingsResponse => ({
+      silverRatePerKg: 0,
+      goldRatePer10g: 0,
+      charges: [],
+      maintenance: { enabled: true, message: '' },
+    }),
   );
   const { message, endAt } = settings.maintenance;
 

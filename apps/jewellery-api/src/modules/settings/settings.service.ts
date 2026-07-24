@@ -2,8 +2,16 @@ import type { UpdateSettingsInput, SettingsResponse } from '@lorka/types';
 import type { SettingsEntity } from '../../common/interfaces/entities';
 import type { ISettingsRepository } from '../../common/interfaces/repositories';
 
-export function toSettingsResponse(settings: SettingsEntity): SettingsResponse {
+/** `includeRazorpayKeys` must only be true for authenticated admins — GET /settings is public
+ * (the storefront reads maintenance mode / rates / charges without logging in), so the Razorpay
+ * secret must never reach that response. */
+export function toSettingsResponse(
+  settings: SettingsEntity,
+  includeRazorpayKeys: boolean,
+): SettingsResponse {
   return {
+    silverRatePerKg: settings.silverRatePerKg,
+    goldRatePer10g: settings.goldRatePer10g,
     charges: settings.charges.map((c) => ({
       id: c.id,
       name: c.name,
@@ -18,19 +26,24 @@ export function toSettingsResponse(settings: SettingsEntity): SettingsResponse {
       message: settings.maintenance.message,
     },
     notificationEmail: settings.notificationEmail,
+    ...(includeRazorpayKeys
+      ? { razorpayKeyId: settings.razorpayKeyId, razorpayKeySecret: settings.razorpayKeySecret }
+      : {}),
   };
 }
 
 export class SettingsService {
   constructor(private readonly settings: ISettingsRepository) {}
 
-  async get(): Promise<SettingsResponse> {
+  async get(includeRazorpayKeys: boolean): Promise<SettingsResponse> {
     const settings = await this.settings.get();
-    return toSettingsResponse(settings);
+    return toSettingsResponse(settings, includeRazorpayKeys);
   }
 
   async update(input: UpdateSettingsInput): Promise<SettingsResponse> {
     const updated = await this.settings.update({
+      silverRatePerKg: input.silverRatePerKg,
+      goldRatePer10g: input.goldRatePer10g,
       charges: input.charges.map((c) => ({
         id: c.id,
         name: c.name,
@@ -45,7 +58,11 @@ export class SettingsService {
         message: input.maintenance.message ?? '',
       },
       notificationEmail: input.notificationEmail,
+      razorpayKeyId: input.razorpayKeyId,
+      razorpayKeySecret: input.razorpayKeySecret,
     });
-    return toSettingsResponse(updated);
+    // update() is only reachable by an authenticated admin (route is role-gated), so it's safe
+    // to always echo the keys back here.
+    return toSettingsResponse(updated, true);
   }
 }

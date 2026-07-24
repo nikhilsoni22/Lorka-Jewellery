@@ -100,7 +100,14 @@ function CheckoutForm() {
     apiClient
       .get<SettingsResponse>('/settings')
       .then(setSettings)
-      .catch(() => setSettings({ charges: [], maintenance: { enabled: false, message: '' } }));
+      .catch(() =>
+        setSettings({
+          silverRatePerKg: 0,
+          goldRatePer10g: 0,
+          charges: [],
+          maintenance: { enabled: false, message: '' },
+        }),
+      );
   }, []);
 
   useEffect(() => {

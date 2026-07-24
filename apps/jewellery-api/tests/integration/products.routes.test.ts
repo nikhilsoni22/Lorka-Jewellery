@@ -44,7 +44,9 @@ function productPayload(categoryId: string, overrides: Record<string, unknown> =
   return {
     name: 'Classic Silver Ring',
     sku: 'RNG-001',
-    price: 1499,
+    metalType: 'silver',
+    makingCharge: 200,
+    weight: 10,
     images: ['https://example.com/ring.jpg'],
     category: categoryId,
     stock: 10,
@@ -126,6 +128,17 @@ describe('POST /products (admin only)', () => {
     expect(res.status).toBe(400);
     expect(res.body.errors).toBeDefined();
   });
+
+  it('accepts a blank discountPercent field as "no offer" (not a validation error)', async () => {
+    const categoryId = await createCategory();
+    const res = await request(app)
+      .post(`${base}/products`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(productPayload(categoryId, { discountPercent: '' }));
+    expect(res.status).toBe(201);
+    expect(res.body.data.discountPercent).toBeUndefined();
+    expect(res.body.data.discountPrice).toBeUndefined();
+  });
 });
 
 describe('PUT/DELETE /products/:id (admin only)', () => {
@@ -140,9 +153,9 @@ describe('PUT/DELETE /products/:id (admin only)', () => {
     const updated = await request(app)
       .put(`${base}/products/${id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ price: 1999 });
+      .send({ makingCharge: 300 });
     expect(updated.status).toBe(200);
-    expect(updated.body.data.price).toBe(1999);
+    expect(updated.body.data.makingCharge).toBe(300);
 
     const deleted = await request(app)
       .delete(`${base}/products/${id}`)
@@ -153,5 +166,56 @@ describe('PUT/DELETE /products/:id (admin only)', () => {
       .get(`${base}/products/${id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(getAfterDelete.status).toBe(404);
+  });
+
+  it('removes an existing offer when discountPercent is cleared on update', async () => {
+    const categoryId = await createCategory();
+    const created = await request(app)
+      .post(`${base}/products`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(productPayload(categoryId, { discountPercent: 20 }));
+    const id = created.body.data.id;
+    expect(created.body.data.discountPercent).toBe(20);
+    expect(created.body.data.discountPrice).toBeDefined();
+
+    const cleared = await request(app)
+      .put(`${base}/products/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ discountPercent: '' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data.discountPercent).toBeUndefined();
+    expect(cleared.body.data.discountPrice).toBeUndefined();
+
+    const refetched = await request(app)
+      .get(`${base}/products/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(refetched.body.data.discountPercent).toBeUndefined();
+  });
+
+  it('recomputes product price live from the admin-set silver rate', async () => {
+    const categoryId = await createCategory();
+    const created = await request(app)
+      .post(`${base}/products`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(productPayload(categoryId, { weight: 10, makingCharge: 200 }));
+    const id = created.body.data.id;
+
+    await request(app)
+      .put(`${base}/settings`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        silverRatePerKg: 1000,
+        goldRatePer10g: 5000,
+        charges: [],
+        maintenance: { enabled: false },
+      })
+      .expect(200);
+
+    const res = await request(app)
+      .get(`${base}/products/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    // weight(10) * (1000/1000 per-gram) + makingCharge(200)
+    expect(res.body.data.price).toBe(210);
   });
 });

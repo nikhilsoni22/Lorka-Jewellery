@@ -11,7 +11,7 @@ import type {
 import type { IEmailService } from '../../common/interfaces/services';
 import { AppError } from '../../common/errors/app-error';
 import { generateUniqueOrderNumber } from '../../common/utils/order-number';
-import { computeCharges, sumCharges } from '../../common/utils/pricing';
+import { computeCharges, sumCharges, computeProductPrice, computeDiscountedPrice } from '../../common/utils/pricing';
 import { verifyRazorpaySignature } from '../payment/razorpay.client';
 import { logger } from '../../common/logger/logger';
 
@@ -50,18 +50,27 @@ export class OrderService {
   ) {}
 
   async create(input: CreateOrderInput, userId?: string): Promise<OrderResponse> {
+    const settings = await this.settingsRepo.get();
+
     if (input.paymentMethod === PaymentMethod.Razorpay) {
       const valid =
         input.razorpayOrderId &&
         input.razorpayPaymentId &&
         input.razorpaySignature &&
-        verifyRazorpaySignature(input.razorpayOrderId, input.razorpayPaymentId, input.razorpaySignature);
+        settings.razorpayKeySecret &&
+        verifyRazorpaySignature(
+          input.razorpayOrderId,
+          input.razorpayPaymentId,
+          input.razorpaySignature,
+          settings.razorpayKeySecret,
+        );
       if (!valid) {
         throw AppError.badRequest('Payment verification failed');
       }
     }
 
     const products = await Promise.all(input.items.map((item) => this.products.findById(item.productId)));
+    const rates = { silverRatePerKg: settings.silverRatePerKg, goldRatePer10g: settings.goldRatePer10g };
 
     const resolvedItems = input.items.map((item, idx) => {
       const product = products[idx];
@@ -72,7 +81,8 @@ export class OrderService {
       if (!item.isBuildOrder && product.stock < item.quantity) {
         throw AppError.conflict(`${product.name} only has ${product.stock} left in stock`);
       }
-      const unitPrice = product.discountPrice ?? product.price;
+      const livePrice = computeProductPrice(product.weight, product.makingCharge, product.metalType, rates);
+      const unitPrice = computeDiscountedPrice(livePrice, product.discountPercent) ?? livePrice;
       return {
         productId: product.id,
         name: product.name,
@@ -100,7 +110,6 @@ export class OrderService {
     }
 
     const subtotal = resolvedItems.reduce((sum, item) => sum + item.subtotal, 0);
-    const settings = await this.settingsRepo.get();
     const charges = computeCharges(subtotal, settings.charges);
     const total = subtotal + sumCharges(charges);
 

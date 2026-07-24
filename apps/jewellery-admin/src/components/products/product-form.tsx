@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createProductSchema, type CreateProductInput, type ProductResponse } from '@lorka/types';
+import { createProductSchema, MetalType, type CreateProductInput, type ProductResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCategories } from '@/lib/hooks/categories';
+import { useSettings } from '@/lib/hooks/settings';
 import { extractMessage } from '@/lib/api-utils';
 import { ImageUpload } from './image-upload';
 
@@ -26,11 +27,13 @@ interface ProductFormProps {
 export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFormProps) {
   const router = useRouter();
   const { data: categoriesData } = useCategories({ limit: 100 });
+  const { data: settings } = useSettings();
 
   const {
     register,
     control,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateProductInput>({
     resolver: zodResolver(createProductSchema),
@@ -40,16 +43,38 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
       shortDescription: '',
       category: '',
       sku: '',
-      price: 0,
+      metalType: MetalType.Silver,
+      makingCharge: 0,
       images: [],
       material: '',
       purity: '',
+      weight: undefined,
       stock: 0,
       isFeatured: false,
       isActive: true,
       ...defaultValues,
     },
   });
+
+  const metalType = watch('metalType');
+  const weight = Number(watch('weight')) || 0;
+  const makingCharge = Number(watch('makingCharge')) || 0;
+  const discountPercent = Number(watch('discountPercent')) || 0;
+  // Silver is quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g).
+  const perGramRate =
+    metalType === MetalType.Gold
+      ? settings?.goldRatePer10g !== undefined
+        ? settings.goldRatePer10g / 10
+        : undefined
+      : settings?.silverRatePerKg !== undefined
+        ? settings.silverRatePerKg / 1000
+        : undefined;
+  const livePrice =
+    perGramRate !== undefined ? Math.round((perGramRate * weight + makingCharge) * 100) / 100 : undefined;
+  const offerPrice =
+    livePrice !== undefined && discountPercent > 0
+      ? Math.round(livePrice * (1 - discountPercent / 100) * 100) / 100
+      : undefined;
 
   const submit = handleSubmit(async (values) => {
     try {
@@ -118,21 +143,65 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="price">Price (₹)</Label>
-            <Input id="price" type="number" step="0.01" {...register('price')} />
-            {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
+            <Label htmlFor="metalType">Metal</Label>
+            <Controller
+              control={control}
+              name="metalType"
+              render={({ field }) => (
+                <Select id="metalType" {...field}>
+                  <option value={MetalType.Silver}>Silver</option>
+                  <option value={MetalType.Gold}>Gold</option>
+                </Select>
+              )}
+            />
+            {errors.metalType && <p className="text-sm text-destructive">{errors.metalType.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="discountPrice">Offer price (₹)</Label>
-            <Input id="discountPrice" type="number" step="0.01" {...register('discountPrice')} />
-            {errors.discountPrice && (
-              <p className="text-sm text-destructive">{errors.discountPrice.message}</p>
+            <Label htmlFor="weight">Weight (grams)</Label>
+            <Input id="weight" type="number" step="0.01" {...register('weight')} />
+            {errors.weight && <p className="text-sm text-destructive">{errors.weight.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="makingCharge">Making charge (₹)</Label>
+            <Input id="makingCharge" type="number" step="0.01" {...register('makingCharge')} />
+            {errors.makingCharge && (
+              <p className="text-sm text-destructive">{errors.makingCharge.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="discountPercent">Offer (% off, optional)</Label>
+            <Input
+              id="discountPercent"
+              type="number"
+              step="1"
+              min={0}
+              max={100}
+              placeholder="e.g. 10"
+              {...register('discountPercent')}
+            />
+            {errors.discountPercent && (
+              <p className="text-sm text-destructive">{errors.discountPercent.message}</p>
+            )}
+            {offerPrice !== undefined && (
+              <p className="text-xs text-muted-foreground">
+                Offer price: ₹{offerPrice.toLocaleString('en-IN')}
+              </p>
             )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="stock">Stock</Label>
             <Input id="stock" type="number" {...register('stock')} />
             {errors.stock && <p className="text-sm text-destructive">{errors.stock.message}</p>}
+          </div>
+          <div className="space-y-2 sm:col-span-3">
+            <Label>Calculated price</Label>
+            <p className="text-lg font-medium">
+              {livePrice !== undefined ? `₹${livePrice.toLocaleString('en-IN')}` : '—'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Weight × today&apos;s {metalType === MetalType.Gold ? 'gold' : 'silver'} rate (set in Settings) +
+              making charge. Updates automatically whenever the admin changes the metal rate.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -141,7 +210,7 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
         <CardHeader>
           <CardTitle>Material &amp; specifications</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="material">Material</Label>
             <Input id="material" {...register('material')} placeholder="Sterling Silver" />
@@ -149,10 +218,6 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
           <div className="space-y-2">
             <Label htmlFor="purity">Purity / Hallmark</Label>
             <Input id="purity" {...register('purity')} placeholder="925" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="weight">Weight (grams)</Label>
-            <Input id="weight" type="number" step="0.01" {...register('weight')} />
           </div>
         </CardContent>
       </Card>

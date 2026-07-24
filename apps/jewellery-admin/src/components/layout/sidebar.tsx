@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -11,6 +12,7 @@ import {
   ImageIcon,
   Settings,
   Ticket,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Brand } from '@/components/brand';
@@ -27,45 +29,99 @@ const NAV = [
   { label: 'Settings', href: '/settings', icon: Settings, enabled: true },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  mobileOpen = false,
+  onClose,
+}: {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
 
-  return (
-    <aside className="hidden w-64 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">
-      <div className="flex h-16 items-center border-b border-border px-6">
-        <Brand />
-      </div>
-      <nav className="flex-1 space-y-1 p-4">
-        {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          const classes = cn(
-            'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-            active
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-            !item.enabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
-          );
+  // Close the mobile drawer whenever the route changes (e.g. after tapping a nav link).
+  useEffect(() => {
+    onClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
-          if (!item.enabled) {
-            return (
-              <span key={item.label} className={classes} title="Coming in a later phase">
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </span>
-            );
-          }
+  const nav = (
+    <nav className="flex-1 space-y-1 p-4">
+      {NAV.map((item) => {
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const Icon = item.icon;
+        const classes = cn(
+          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          active
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          !item.enabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+        );
+
+        if (!item.enabled) {
           return (
-            <Link key={item.label} href={item.href} className={classes}>
+            <span key={item.label} className={classes} title="Coming in a later phase">
               <Icon className="h-4 w-4" />
               {item.label}
-            </Link>
+            </span>
           );
-        })}
-      </nav>
-      <div className="border-t border-border p-4 text-xs text-muted-foreground">
-        Phase 2 · Product Catalog
-      </div>
-    </aside>
+        }
+        return (
+          <Link key={item.label} href={item.href} className={classes}>
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  return (
+    <>
+      {/* Desktop: static sidebar, always visible */}
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">
+        <div className="flex h-16 items-center border-b border-border px-6">
+          <Brand />
+        </div>
+        {nav}
+        <div className="border-t border-border p-4 text-xs text-muted-foreground">
+          Phase 2 · Product Catalog
+        </div>
+      </aside>
+
+      {/* Mobile: slide-in drawer, toggled from the topbar's menu button */}
+      <div
+        className={cn(
+          'fixed inset-0 z-40 bg-black/50 transition-opacity lg:hidden',
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform duration-200 lg:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+      >
+        <div className="flex h-16 items-center justify-between border-b border-border px-6">
+          <Brand />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        {nav}
+        <div className="border-t border-border p-4 text-xs text-muted-foreground">
+          Phase 2 · Product Catalog
+        </div>
+      </aside>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import { env } from '../../config/env';
 import { logger } from '../../common/logger/logger';
 import { AppError } from '../../common/errors/app-error';
 
@@ -13,20 +12,26 @@ export interface RazorpayOrder {
   status: string;
 }
 
-function authHeader(): string {
-  const token = Buffer.from(`${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`).toString('base64');
+function authHeader(keyId: string, keySecret: string): string {
+  const token = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
   return `Basic ${token}`;
 }
 
-/** Creates a Razorpay order for the given amount (in paise). Auto-captures on payment success. */
-export async function createRazorpayOrder(amountPaise: number, receipt: string): Promise<RazorpayOrder> {
+/** Creates a Razorpay order for the given amount (in paise). Auto-captures on payment success.
+ * Credentials come from the caller (sourced from admin-configured Settings), not from env. */
+export async function createRazorpayOrder(
+  amountPaise: number,
+  receipt: string,
+  keyId: string,
+  keySecret: string,
+): Promise<RazorpayOrder> {
   let res: Response;
   try {
     res = await fetch(`${RAZORPAY_API_BASE}/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: authHeader(),
+        Authorization: authHeader(keyId, keySecret),
       },
       body: JSON.stringify({
         amount: amountPaise,
@@ -50,9 +55,14 @@ export async function createRazorpayOrder(amountPaise: number, receipt: string):
 }
 
 /** Verifies the HMAC-SHA256 signature Razorpay returns after a successful checkout. */
-export function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): boolean {
+export function verifyRazorpaySignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  keySecret: string,
+): boolean {
   const expected = crypto
-    .createHmac('sha256', env.RAZORPAY_KEY_SECRET)
+    .createHmac('sha256', keySecret)
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 

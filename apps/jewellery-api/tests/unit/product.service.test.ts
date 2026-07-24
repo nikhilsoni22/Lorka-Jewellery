@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { MetalType } from '@lorka/types';
 import { ProductService } from '../../src/modules/product/product.service';
 import { CategoryService } from '../../src/modules/category/category.service';
-import { FakeProductRepository, FakeCategoryRepository } from '../helpers/catalog-fakes';
+import {
+  FakeProductRepository,
+  FakeCategoryRepository,
+  FakeSettingsRepository,
+} from '../helpers/catalog-fakes';
 
 let products: FakeProductRepository;
 let categories: FakeCategoryRepository;
+let settings: FakeSettingsRepository;
 let productService: ProductService;
 let categoryService: CategoryService;
 
@@ -12,11 +18,14 @@ const validInput = (overrides: Partial<Parameters<ProductService['create']>[0]> 
   name: 'Classic Silver Ring',
   description: '',
   shortDescription: '',
+  category: '',
   sku: 'RNG-001',
-  price: 1499,
+  metalType: MetalType.Silver,
+  makingCharge: 200,
   images: ['https://example.com/ring.jpg'],
   material: 'Sterling Silver',
   purity: '925',
+  weight: 10,
   stock: 10,
   isFeatured: false,
   isActive: true,
@@ -26,7 +35,8 @@ const validInput = (overrides: Partial<Parameters<ProductService['create']>[0]> 
 beforeEach(async () => {
   products = new FakeProductRepository();
   categories = new FakeCategoryRepository();
-  productService = new ProductService(products, categories);
+  settings = new FakeSettingsRepository();
+  productService = new ProductService(products, categories, settings);
   categoryService = new CategoryService(categories);
 });
 
@@ -89,6 +99,18 @@ describe('ProductService.update', () => {
       productService.update(first.id, { sku: 'RNG-002' }),
     ).rejects.toMatchObject({ statusCode: 409 });
   });
+
+  it('clears an existing offer when discountPercent is explicitly set to null', async () => {
+    const category = await createCategory();
+    const created = await productService.create(
+      validInput({ category: category.id, discountPercent: 10 }),
+    );
+    expect(created.discountPercent).toBe(10);
+
+    const updated = await productService.update(created.id, { discountPercent: null });
+    expect(updated.discountPercent).toBeUndefined();
+    expect(updated.discountPrice).toBeUndefined();
+  });
 });
 
 describe('ProductService.list', () => {
@@ -120,5 +142,69 @@ describe('ProductService.getBySlug', () => {
 describe('ProductService.delete', () => {
   it('throws not-found for a missing product', async () => {
     await expect(productService.delete('missing')).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe('live silver/gold pricing', () => {
+  it('derives price from weight × metal rate + making charge, per metal type', async () => {
+    const category = await createCategory();
+    const silverProduct = await productService.create(
+      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingCharge: 200 }),
+    );
+    const goldProduct = await productService.create(
+      validInput({
+        category: category.id,
+        sku: 'RNG-GOLD-1',
+        name: 'Gold Band',
+        metalType: MetalType.Gold,
+        weight: 5,
+        makingCharge: 500,
+      }),
+    );
+
+    // FakeSettingsRepository defaults: silverRatePerKg 80000 (=80/g), goldRatePer10g 70000 (=7000/g)
+    expect(silverProduct.price).toBe(10 * 80 + 200);
+    expect(goldProduct.price).toBe(5 * 7000 + 500);
+  });
+
+  it('recalculates every product price the moment the admin changes the metal rate', async () => {
+    const category = await createCategory();
+    const product = await productService.create(
+      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingCharge: 200 }),
+    );
+    expect(product.price).toBe(10 * 80 + 200);
+
+    await settings.update({
+      silverRatePerKg: 100000,
+      goldRatePer10g: 70000,
+      charges: [],
+      maintenance: { enabled: false, message: '' },
+    });
+
+    const repriced = await productService.getById(product.id);
+    expect(repriced.price).toBe(10 * 100 + 200);
+  });
+
+  it('rejects an offer percent above 100', async () => {
+    const category = await createCategory();
+    await expect(
+      productService.create(validInput({ category: category.id, discountPercent: 150 })),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('derives discountPrice from discountPercent applied to the calculated price', async () => {
+    const category = await createCategory();
+    const product = await productService.create(
+      validInput({
+        category: category.id,
+        metalType: MetalType.Silver,
+        weight: 10,
+        makingCharge: 200,
+        discountPercent: 10,
+      }),
+    );
+    // price = 10 * 80 + 200 = 1000; 10% off = 900
+    expect(product.price).toBe(1000);
+    expect(product.discountPrice).toBe(900);
   });
 });
