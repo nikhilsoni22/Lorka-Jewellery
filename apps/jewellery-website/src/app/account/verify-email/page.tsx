@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,18 @@ const inputClass =
   'w-full rounded-md border border-border bg-background px-3 py-2 text-center text-lg tracking-[0.5em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailForm />
+    </Suspense>
+  );
+}
+
+function VerifyEmailForm() {
   const { user, status: authStatus } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/account/orders';
 
   const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -24,9 +34,9 @@ export default function VerifyEmailPage() {
     if (authStatus === 'unauthenticated') {
       router.replace('/account/login?redirect=/account/verify-email');
     } else if (user?.emailVerified) {
-      router.replace('/account/orders');
+      router.replace(redirect);
     }
-  }, [authStatus, user, router]);
+  }, [authStatus, user, router, redirect]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -34,7 +44,7 @@ export default function VerifyEmailPage() {
     try {
       await apiClient.post('/auth/verify-email/otp', { otp });
       toast.success('Email verified!');
-      router.push('/account/orders');
+      router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Invalid or expired code');
     } finally {

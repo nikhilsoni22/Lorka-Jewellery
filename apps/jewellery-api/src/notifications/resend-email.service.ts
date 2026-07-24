@@ -1,4 +1,3 @@
-import nodemailer, { type Transporter } from 'nodemailer';
 import type { OrderResponse } from '@lorka/types';
 import type { IEmailService } from '../common/interfaces/services';
 import { env } from '../config/env';
@@ -12,28 +11,15 @@ import {
   orderStatusUpdateEmail,
 } from './email-templates';
 
-/** Raw Gmail/SMTP transport, used when SMTP_USER/SMTP_PASS are configured. Note: most PaaS
- * (Render included) block outbound SMTP ports on lower tiers — if sends fail with ETIMEDOUT,
- * that's the platform, not these credentials. Prefer ResendEmailService in that case. */
-export class SmtpEmailService implements IEmailService {
-  private readonly transporter: Transporter;
+/** Sends email over Resend's HTTPS API instead of raw SMTP sockets — outbound HTTPS (443) works
+ * on every host, unlike SMTP ports (25/465/587), which Render and several other PaaS block on
+ * their lower tiers. Used when RESEND_API_KEY is configured; see container.ts for the choice
+ * between this, SmtpEmailService, and ConsoleEmailService. */
+export class ResendEmailService implements IEmailService {
   private readonly from: string;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_PORT === 465,
-      auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-      // nodemailer's defaults (2 min connection/socket timeout) make a blocked/unreachable SMTP
-      // port fail slowly instead of fast — every caller here already treats send failures as
-      // best-effort, so failing in ~10s instead of ~2min matters even though nothing awaits it
-      // directly anymore.
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 10_000,
-    });
-    this.from = env.EMAIL_FROM || env.SMTP_USER!;
+    this.from = env.EMAIL_FROM || 'Lorka Jewellers <onboarding@resend.dev>';
   }
 
   async sendPasswordReset(to: string, resetUrl: string): Promise<void> {
@@ -68,9 +54,20 @@ export class SmtpEmailService implements IEmailService {
 
   private async send(to: string, subject: string, html: string): Promise<void> {
     try {
-      await this.transporter.sendMail({ from: this.from, to, subject, html });
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ from: this.from, to, subject, html }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        logger.error({ status: res.status, body, to, subject }, '[email] Resend API returned an error');
+      }
     } catch (err) {
-      logger.error({ err, to, subject }, '[email] Failed to send email via SMTP');
+      logger.error({ err, to, subject }, '[email] Failed to send email via Resend');
     }
   }
 }

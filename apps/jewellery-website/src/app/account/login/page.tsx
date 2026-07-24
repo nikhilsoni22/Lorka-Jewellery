@@ -38,6 +38,13 @@ function LoginForm() {
     try {
       const result = await apiClient.post<LoginResult>('/auth/login', { email, password, rememberMe });
       setSession(result);
+      if (!result.user.emailVerified) {
+        // Their original OTP (from registration) has likely expired by now — send a fresh one
+        // so the verify screen isn't a dead end.
+        apiClient.post('/auth/verify-email/resend').catch(() => {});
+        router.push(`/account/verify-email?redirect=${encodeURIComponent(redirect)}`);
+        return;
+      }
       router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unable to sign in');

@@ -6,8 +6,10 @@ import { AuditLogRepository } from '../modules/audit/audit-log.repository';
 import { AuditLogService } from '../modules/audit/audit-log.service';
 import { ConsoleEmailService } from '../notifications/console-email.service';
 import { SmtpEmailService } from '../notifications/smtp-email.service';
+import { ResendEmailService } from '../notifications/resend-email.service';
 import { env, isProd } from '../config/env';
 import { logger } from '../common/logger/logger';
+import type { IEmailService } from '../common/interfaces/services';
 import { AuthService } from '../modules/auth/auth.service';
 import { AuthController } from '../modules/auth/auth.controller';
 import { CategoryRepository } from '../modules/category/category.repository';
@@ -66,17 +68,26 @@ export function buildContainer(): AppContainer {
   const settingsRepository = new SettingsRepository();
 
   // Infrastructure services
-  const smtpConfigured = Boolean(env.SMTP_USER && env.SMTP_PASS);
-  if (!smtpConfigured && isProd) {
+  // Resend (HTTPS API) takes priority — SMTP ports are commonly blocked outbound on hosts like
+  // Render, so RESEND_API_KEY is the one that actually works in production there.
+  let emailService: IEmailService;
+  if (env.RESEND_API_KEY) {
+    emailService = new ResendEmailService();
+  } else if (env.SMTP_USER && env.SMTP_PASS) {
+    emailService = new SmtpEmailService();
+  } else {
     // Not throwing: a missing mailer shouldn't take down order/checkout flows, but this must
     // never fail silently — ConsoleEmailService only logs, it never actually sends anything.
-    logger.warn(
-      'SMTP_USER/SMTP_PASS are not set — running with ConsoleEmailService in production, so ' +
-        'password reset, OTP, and order emails will NOT be delivered. Set them on the host ' +
-        '(e.g. Render → Environment), not just in the local .env file.',
-    );
+    if (isProd) {
+      logger.warn(
+        'Neither RESEND_API_KEY nor SMTP_USER/SMTP_PASS are set — running with ' +
+          'ConsoleEmailService in production, so password reset, OTP, and order emails will ' +
+          'NOT be delivered. Set them on the host (e.g. Render → Environment), not just in the ' +
+          'local .env file.',
+      );
+    }
+    emailService = new ConsoleEmailService();
   }
-  const emailService = smtpConfigured ? new SmtpEmailService() : new ConsoleEmailService();
   const auditLogService = new AuditLogService(auditLogRepository);
 
   // Domain services

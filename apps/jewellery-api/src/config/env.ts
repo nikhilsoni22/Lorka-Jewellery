@@ -53,9 +53,16 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
 
-  // Gmail SMTP — leave unset in dev to fall back to logging emails to the console. Trimmed
-  // because a stray trailing space (easy to pick up when pasting a Gmail App Password) makes
-  // Gmail silently reject auth — the failure otherwise looks identical to "not configured".
+  // Resend (HTTPS email API) — preferred over SMTP in production. Most PaaS, Render included,
+  // block outbound SMTP ports on lower tiers; HTTPS (443) is never blocked. If set, this takes
+  // priority over the SMTP_* config below — see container.ts.
+  RESEND_API_KEY: z.string().trim().optional(),
+
+  // Gmail SMTP — leave unset in dev to fall back to logging emails to the console. Works fine
+  // locally; on Render (and similar hosts) outbound SMTP is commonly blocked, so prefer
+  // RESEND_API_KEY above in production. Trimmed because a stray trailing space (easy to pick up
+  // when pasting a Gmail App Password) makes Gmail silently reject auth — the failure otherwise
+  // looks identical to "not configured".
   SMTP_HOST: z.string().trim().default('smtp.gmail.com'),
   SMTP_PORT: z.coerce.number().int().positive().default(465),
   SMTP_USER: z.string().trim().optional(),
