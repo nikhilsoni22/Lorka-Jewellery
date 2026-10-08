@@ -5,6 +5,17 @@ export interface EmailContent {
   html: string;
 }
 
+/** Google Maps directions link for the delivery address — opens turn-by-turn navigation in the
+ * Maps app/site. Uses the exact pin the customer picked at checkout when we have one, otherwise
+ * falls back to searching the typed address. Needs no API key. */
+function mapsNavigationUrl(order: OrderResponse): string {
+  const { location, line1, line2, city, state, postalCode, country } = order.shippingAddress;
+  const destination = location
+    ? `${location.lat},${location.lng}`
+    : [line1, line2, city, state, postalCode, country].filter(Boolean).join(', ');
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+}
+
 function renderOrderConfirmationHtml(
   order: OrderResponse,
   audience: 'customer' | 'admin' = 'customer',
@@ -65,6 +76,13 @@ function renderOrderConfirmationHtml(
         ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postalCode}<br />
         ${order.shippingAddress.country}
       </p>
+      ${
+        audience === 'admin'
+          ? `<p style="margin:12px 0 0;">
+        <a href="${mapsNavigationUrl(order)}" style="display:inline-block;background:#1a73e8;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:bold;">📍 Navigate to delivery address</a>
+      </p>`
+          : ''
+      }
 
       <p style="margin-top:24px;color:#666;font-size:13px;">
         Payment method: ${order.paymentMethod.toUpperCase()} (${order.paymentStatus})
