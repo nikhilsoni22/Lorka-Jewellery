@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Crosshair, Loader2 } from 'lucide-react';
 import {
   ALLOWED_ORDER_CITIES,
   ChargeType,
@@ -43,6 +43,13 @@ interface GooglePlaceResult {
   formatted_address?: string;
 }
 
+interface GoogleGeocoder {
+  geocode: (
+    request: { location: { lat: number; lng: number } },
+    callback: (results: GooglePlaceResult[] | null, status: string) => void,
+  ) => void;
+}
+
 interface GoogleAutocompleteInstance {
   addListener: (event: 'place_changed', handler: () => void) => GoogleMapsEventListener;
   getPlace: () => GooglePlaceResult;
@@ -77,6 +84,7 @@ declare global {
     Razorpay?: new (options: RazorpayOptions) => RazorpayInstance;
     google?: {
       maps: {
+        Geocoder: new () => GoogleGeocoder;
         places: {
           Autocomplete: new (
             input: HTMLInputElement,
@@ -132,9 +140,69 @@ function CheckoutForm() {
   });
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const line1Ref = useRef<HTMLInputElement>(null);
 
   const cityAllowed = form.city.trim() === '' || isAllowedCity(form.city);
+
+  // Fills the address fields from a Google place/geocode result and remembers its coordinates.
+  // Shared by autocomplete selection and "use my current location".
+  const applyPlace = useCallback((place: GooglePlaceResult, lat: number, lng: number) => {
+    const component = (type: string) =>
+      place.address_components?.find((c) => c.types.includes(type))?.long_name ?? '';
+    const street = [component('street_number'), component('route')].filter(Boolean).join(' ');
+    const city = component('locality') || component('postal_town') || component('administrative_area_level_2');
+
+    setForm((f) => ({
+      ...f,
+      line1: street || place.formatted_address || f.line1,
+      city: city || f.city,
+      state: component('administrative_area_level_1') || f.state,
+      postalCode: component('postal_code') || f.postalCode,
+      country: component('country') || f.country,
+    }));
+    setLocation({ lat, lng });
+  }, []);
+
+  const detectCurrentLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      toast.error('Location detection is not supported by your browser.');
+      return;
+    }
+    setDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude: lat, longitude: lng } = coords;
+        if (!window.google) {
+          setLocation({ lat, lng });
+          setDetecting(false);
+          toast.error('Could not look up the address. Please type it in.');
+          return;
+        }
+        new window.google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+          setDetecting(false);
+          const best = status === 'OK' ? results?.[0] : undefined;
+          if (!best) {
+            // Keep the pin so delivery can still navigate to it, but the address needs typing.
+            setLocation({ lat, lng });
+            toast.error('Found your location but could not read the address. Please type it in.');
+            return;
+          }
+          applyPlace(best, lat, lng);
+          toast.success('Address filled from your current location. Please check it.');
+        });
+      },
+      (err) => {
+        setDetecting(false);
+        toast.error(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied. Please allow location access or type your address.'
+            : 'Unable to detect your location. Please type your address.',
+        );
+      },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
+    );
+  };
 
   useEffect(() => {
     if (!mapsLoaded || !line1Ref.current || typeof window === 'undefined' || !window.google) return;
@@ -147,35 +215,16 @@ function CheckoutForm() {
 
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
-      if (!place.address_components || !place.geometry?.location) {
+      const loc = place.geometry?.location;
+      if (!place.address_components || !loc) {
         setLocation(null);
         return;
       }
-
-      const component = (type: string) =>
-        place.address_components?.find((c) => c.types.includes(type))?.long_name ?? '';
-      const streetNumber = component('street_number');
-      const route = component('route');
-      const city = component('locality') || component('postal_town') || component('administrative_area_level_2');
-      const state = component('administrative_area_level_1');
-      const postalCode = component('postal_code');
-      const country = component('country');
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-
-      setForm((f) => ({
-        ...f,
-        line1: [streetNumber, route].filter(Boolean).join(' ') || place.formatted_address || f.line1,
-        city: city || f.city,
-        state: state || f.state,
-        postalCode: postalCode || f.postalCode,
-        country: country || f.country,
-      }));
-      setLocation({ lat, lng });
+      applyPlace(place, loc.lat(), loc.lng());
     });
 
     return () => listener.remove();
-  }, [mapsLoaded]);
+  }, [mapsLoaded, applyPlace]);
 
   useEffect(() => {
     if (isBuyNow) {
@@ -406,7 +455,20 @@ function CheckoutForm() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="text-sm font-medium">Address line 1</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium">Address line 1</label>
+                {GOOGLE_MAPS_API_KEY && (
+                  <button
+                    type="button"
+                    onClick={detectCurrentLocation}
+                    disabled={!mapsLoaded || detecting}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                  >
+                    {detecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
+                    Use my current location
+                  </button>
+                )}
+              </div>
               <input
                 required
                 ref={line1Ref}
