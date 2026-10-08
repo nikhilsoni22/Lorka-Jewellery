@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCreateCategory, useUpdateCategory } from '@/lib/hooks/categories';
 import { extractMessage } from '@/lib/api-utils';
+import { SingleImageUpload } from '@/components/single-image-upload';
 
 const emptyDefaults: CreateCategoryInput = {
   name: '',
@@ -49,11 +50,15 @@ export function CategoryFormDialog({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateCategoryInput>({
     resolver: zodResolver(createCategorySchema),
     defaultValues: emptyDefaults,
   });
+
+  const image = watch('image');
 
   useEffect(() => {
     if (open) {
@@ -109,8 +114,13 @@ export function CategoryFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cat-image">Image URL</Label>
-            <Input id="cat-image" {...register('image')} placeholder="https://…" />
+            <Label>Category Image</Label>
+            <SingleImageUpload
+              uploadPath="/uploads/categories"
+              previewClassName="aspect-square"
+              value={image ?? ''}
+              onChange={(url) => setValue('image', url, { shouldValidate: true, shouldDirty: true })}
+            />
             {errors.image && <p className="text-sm text-destructive">{errors.image.message}</p>}
           </div>
 

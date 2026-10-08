@@ -25,4 +25,14 @@ export class UploadController {
     const url = await uploadImageToCloudinary(file.buffer, 'lorka-jewellers/banners');
     sendSuccess(res, { url }, 201);
   };
+
+  uploadCategoryImage = async (req: Request, res: Response): Promise<void> => {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) {
+      throw AppError.badRequest('An image file is required');
+    }
+
+    const url = await uploadImageToCloudinary(file.buffer, 'lorka-jewellers/categories');
+    sendSuccess(res, { url }, 201);
+  };
 }

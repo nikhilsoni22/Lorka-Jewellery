@@ -47,7 +47,7 @@ export function productImagesUpload(req: Request, res: Response, next: NextFunct
 }
 
 /** Accepts a single image under the `image` field; converts multer's own errors into AppError. */
-export function bannerImageUpload(req: Request, res: Response, next: NextFunction): void {
+export function singleImageUpload(req: Request, res: Response, next: NextFunction): void {
   bannerUpload.single('image')(req, res, (err: unknown) => {
     if (!err) {
       next();

@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCreateBanner, useUpdateBanner } from '@/lib/hooks/banners';
 import { extractMessage } from '@/lib/api-utils';
-import { BannerImageUpload } from './banner-image-upload';
+import { SingleImageUpload } from '@/components/single-image-upload';
 
 const emptyDefaults: CreateBannerInput = {
   title: '',
@@ -116,7 +116,8 @@ export function BannerFormDialog({
 
           <div className="space-y-2">
             <Label>Banner Image</Label>
-            <BannerImageUpload
+            <SingleImageUpload
+              uploadPath="/uploads/banners"
               value={image}
               onChange={(url) => setValue('image', url, { shouldValidate: true, shouldDirty: true })}
             />

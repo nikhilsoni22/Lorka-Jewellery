@@ -8,12 +8,19 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { extractMessage } from '@/lib/api-utils';
 
-export function BannerImageUpload({
+/** Uploads one image to the API (which stores it on Cloudinary) and reports back its URL. */
+export function SingleImageUpload({
   value,
   onChange,
+  uploadPath,
+  previewClassName = 'aspect-video',
 }: {
   value: string;
   onChange: (url: string) => void;
+  /** API endpoint, e.g. '/uploads/banners' or '/uploads/categories'. */
+  uploadPath: string;
+  /** Aspect ratio class for the preview box. */
+  previewClassName?: string;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +34,7 @@ export function BannerImageUpload({
 
     setIsUploading(true);
     try {
-      const { data } = await api.post<ApiResponse<{ url: string }>>('/uploads/banners', formData);
+      const { data } = await api.post<ApiResponse<{ url: string }>>(uploadPath, formData);
       if (data.success) {
         onChange(data.data.url);
       }
@@ -50,7 +57,7 @@ export function BannerImageUpload({
       />
 
       {value && (
-        <div className="group relative aspect-video w-full max-w-xs overflow-hidden rounded-md border border-border">
+        <div className={`group relative ${previewClassName} w-full max-w-xs overflow-hidden rounded-md border border-border`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={value} alt="" className="h-full w-full object-cover" />
           <button
