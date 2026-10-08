@@ -22,6 +22,14 @@ const orderChargeSchema = new Schema(
   { _id: false },
 );
 
+const geoLocationSchema = new Schema(
+  {
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const shippingAddressSchema = new Schema(
   {
     line1: { type: String, required: true },
@@ -30,6 +38,7 @@ const shippingAddressSchema = new Schema(
     state: { type: String, required: true },
     postalCode: { type: String, required: true },
     country: { type: String, default: 'India' },
+    location: { type: geoLocationSchema, default: null },
   },
   { _id: false },
 );

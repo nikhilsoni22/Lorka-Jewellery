@@ -29,6 +29,7 @@ function toEntity(doc: OrderDocument): OrderEntity {
       state: doc.shippingAddress.state,
       postalCode: doc.shippingAddress.postalCode,
       country: doc.shippingAddress.country,
+      location: doc.shippingAddress.location ?? null,
     },
     items: doc.items.map((item) => ({
       productId: item.productId.toString(),

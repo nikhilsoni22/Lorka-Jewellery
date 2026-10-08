@@ -98,6 +98,7 @@ export interface ShippingAddressEntity {
   state: string;
   postalCode: string;
   country: string;
+  location?: { lat: number; lng: number } | null;
 }
 
 export interface OrderChargeEntity {

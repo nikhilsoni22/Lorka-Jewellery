@@ -1,11 +1,17 @@
 'use client';
 
-import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { ChargeType, type OrderResponse, type RazorpayOrderResponse, type SettingsResponse } from '@lorka/types';
+import {
+  ALLOWED_ORDER_CITIES,
+  ChargeType,
+  type OrderResponse,
+  type RazorpayOrderResponse,
+  type SettingsResponse,
+} from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { useCart, type CartItem } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
@@ -14,6 +20,33 @@ import { cn } from '@/lib/utils';
 
 const inputClass =
   'w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+
+const isAllowedCity = (city: string) =>
+  ALLOWED_ORDER_CITIES.some((c) => c.toLowerCase() === city.trim().toLowerCase());
+
+const cityRestrictionMessage = `We currently deliver only within ${ALLOWED_ORDER_CITIES.join(' and ')}. Support for other cities is coming soon.`;
+
+interface GoogleMapsEventListener {
+  remove: () => void;
+}
+
+interface GoogleAddressComponent {
+  long_name: string;
+  types: string[];
+}
+
+interface GooglePlaceResult {
+  address_components?: GoogleAddressComponent[];
+  geometry?: { location?: { lat: () => number; lng: () => number } };
+  formatted_address?: string;
+}
+
+interface GoogleAutocompleteInstance {
+  addListener: (event: 'place_changed', handler: () => void) => GoogleMapsEventListener;
+  getPlace: () => GooglePlaceResult;
+}
 
 interface RazorpayHandlerResponse {
   razorpay_order_id: string;
@@ -42,6 +75,16 @@ interface RazorpayInstance {
 declare global {
   interface Window {
     Razorpay?: new (options: RazorpayOptions) => RazorpayInstance;
+    google?: {
+      maps: {
+        places: {
+          Autocomplete: new (
+            input: HTMLInputElement,
+            opts?: Record<string, unknown>,
+          ) => GoogleAutocompleteInstance;
+        };
+      };
+    };
   }
 }
 
@@ -87,6 +130,52 @@ function CheckoutForm() {
     country: 'India',
     notes: '',
   });
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+  const line1Ref = useRef<HTMLInputElement>(null);
+
+  const cityAllowed = form.city.trim() === '' || isAllowedCity(form.city);
+
+  useEffect(() => {
+    if (!mapsLoaded || !line1Ref.current || typeof window === 'undefined' || !window.google) return;
+
+    const autocomplete = new window.google.maps.places.Autocomplete(line1Ref.current, {
+      fields: ['address_components', 'geometry', 'formatted_address'],
+      componentRestrictions: { country: 'in' },
+      types: ['address'],
+    });
+
+    const listener = autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.address_components || !place.geometry?.location) {
+        setLocation(null);
+        return;
+      }
+
+      const component = (type: string) =>
+        place.address_components?.find((c) => c.types.includes(type))?.long_name ?? '';
+      const streetNumber = component('street_number');
+      const route = component('route');
+      const city = component('locality') || component('postal_town') || component('administrative_area_level_2');
+      const state = component('administrative_area_level_1');
+      const postalCode = component('postal_code');
+      const country = component('country');
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+
+      setForm((f) => ({
+        ...f,
+        line1: [streetNumber, route].filter(Boolean).join(' ') || place.formatted_address || f.line1,
+        city: city || f.city,
+        state: state || f.state,
+        postalCode: postalCode || f.postalCode,
+        country: country || f.country,
+      }));
+      setLocation({ lat, lng });
+    });
+
+    return () => listener.remove();
+  }, [mapsLoaded]);
 
   useEffect(() => {
     if (isBuyNow) {
@@ -139,8 +228,12 @@ function CheckoutForm() {
     }));
   const total = subtotal + charges.reduce((sum, c) => sum + c.amount, 0);
 
-  const updateField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const updateField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
+    // Coordinates were captured for a specific autocomplete selection; once the address is
+    // hand-edited they no longer necessarily match, so drop them rather than keep stale data.
+    if (field === 'line1') setLocation(null);
+  };
 
   const orderItemsPayload = () =>
     items.map((i) => ({
@@ -166,6 +259,7 @@ function CheckoutForm() {
         state: form.state,
         postalCode: form.postalCode,
         country: form.country,
+        location,
       },
       items: orderItemsPayload(),
       notes: form.notes || undefined,
@@ -228,6 +322,10 @@ function CheckoutForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (items.length === 0) return;
+    if (!isAllowedCity(form.city)) {
+      toast.error(cityRestrictionMessage);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -265,6 +363,13 @@ function CheckoutForm() {
   return (
     <main className="container py-12">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+      {GOOGLE_MAPS_API_KEY && (
+        <Script
+          src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`}
+          strategy="afterInteractive"
+          onLoad={() => setMapsLoaded(true)}
+        />
+      )}
       <h1 className="text-3xl">Checkout</h1>
 
       <div className="mt-8 grid gap-10 lg:grid-cols-3">
@@ -304,10 +409,16 @@ function CheckoutForm() {
               <label className="text-sm font-medium">Address line 1</label>
               <input
                 required
+                ref={line1Ref}
+                autoComplete="off"
+                placeholder="Start typing your address…"
                 value={form.line1}
                 onChange={updateField('line1')}
                 className={cn(inputClass, 'mt-1')}
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                We currently deliver only within {ALLOWED_ORDER_CITIES.join(' and ')}.
+              </p>
             </div>
             <div className="sm:col-span-2">
               <label className="text-sm font-medium">Address line 2 (optional)</label>
@@ -319,8 +430,11 @@ function CheckoutForm() {
                 required
                 value={form.city}
                 onChange={updateField('city')}
-                className={cn(inputClass, 'mt-1')}
+                className={cn(inputClass, 'mt-1', !cityAllowed && 'border-destructive focus-visible:ring-destructive')}
               />
+              {!cityAllowed && (
+                <p className="mt-1 text-xs text-destructive">{cityRestrictionMessage}</p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium">State</label>
@@ -397,7 +511,7 @@ function CheckoutForm() {
             </div>
           </div>
 
-          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+          <Button type="submit" disabled={submitting || !cityAllowed} className="w-full sm:w-auto">
             {submitting
               ? paymentMethod === 'razorpay'
                 ? 'Processing payment…'

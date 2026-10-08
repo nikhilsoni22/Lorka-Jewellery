@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { OrderStatus } from '@lorka/types';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +66,22 @@ export default function OrderDetailPage() {
       onError: (err) => toast.error(extractMessage(err, 'Unable to update build ETA')),
     });
   };
+
+  const address = order.shippingAddress;
+  const fullAddressText = [
+    address.line1,
+    address.line2,
+    `${address.city}, ${address.state} ${address.postalCode}`,
+    address.country,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const mapsUrl = address.location
+    ? `https://www.google.com/maps?q=${address.location.lat},${address.location.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddressText)}`;
+  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+    `Delivery location for order ${order.orderNumber}:\n${fullAddressText}\n${mapsUrl}`,
+  )}`;
 
   return (
     <div className="space-y-6">
@@ -163,6 +179,26 @@ export default function OrderDetailPage() {
                 {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
               </p>
               <p>{order.shippingAddress.country}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3 text-sm">
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-primary hover:underline"
+              >
+                <MapPin className="h-4 w-4" />
+                {address.location ? 'View on Google Maps' : 'Search on Google Maps'}
+              </a>
+              <a
+                href={whatsappShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-primary hover:underline"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Share on WhatsApp
+              </a>
             </div>
           </div>
 

@@ -10,14 +10,32 @@ export const orderItemInputSchema = z.object({
   isBuildOrder: z.boolean().optional().default(false),
 });
 
-export const shippingAddressSchema = z.object({
-  line1: z.string().trim().min(3).max(200),
-  line2: z.string().trim().max(200).optional().default(''),
-  city: z.string().trim().min(2).max(100),
-  state: z.string().trim().min(2).max(100),
-  postalCode: z.string().trim().min(3).max(12),
-  country: z.string().trim().min(2).max(100).optional().default('India'),
+// Delivery is only live in these two cities for now; update here (and in the website's
+// checkout copy) when coverage expands to more cities.
+export const ALLOWED_ORDER_CITIES = ['Jodhpur', 'Jaipur'] as const;
+
+const isAllowedOrderCity = (city: string) =>
+  ALLOWED_ORDER_CITIES.some((c) => c.toLowerCase() === city.trim().toLowerCase());
+
+export const geoLocationSchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
 });
+
+export const shippingAddressSchema = z
+  .object({
+    line1: z.string().trim().min(3).max(200),
+    line2: z.string().trim().max(200).optional().default(''),
+    city: z.string().trim().min(2).max(100),
+    state: z.string().trim().min(2).max(100),
+    postalCode: z.string().trim().min(3).max(12),
+    country: z.string().trim().min(2).max(100).optional().default('India'),
+    location: geoLocationSchema.nullable().optional(),
+  })
+  .refine((data) => isAllowedOrderCity(data.city), {
+    message: `We currently deliver only within ${ALLOWED_ORDER_CITIES.join(' and ')}`,
+    path: ['city'],
+  });
 
 export const createOrderSchema = z
   .object({
