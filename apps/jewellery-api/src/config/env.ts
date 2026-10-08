@@ -53,6 +53,10 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
 
+  // Brevo (HTTPS email API) — no custom domain needed, just a verified sender address. Highest
+  // priority if set; EMAIL_FROM must be that verified sender.
+  BREVO_API_KEY: z.string().trim().optional(),
+
   // Resend (HTTPS email API) — preferred over SMTP in production. Most PaaS, Render included,
   // block outbound SMTP ports on lower tiers; HTTPS (443) is never blocked. If set, this takes
   // priority over the SMTP_* config below — see container.ts.

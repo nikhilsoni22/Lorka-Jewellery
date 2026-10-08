@@ -6,6 +6,7 @@ import { AuditLogRepository } from '../modules/audit/audit-log.repository';
 import { AuditLogService } from '../modules/audit/audit-log.service';
 import { ConsoleEmailService } from '../notifications/console-email.service';
 import { SmtpEmailService } from '../notifications/smtp-email.service';
+import { BrevoEmailService } from '../notifications/brevo-email.service';
 import { ResendEmailService } from '../notifications/resend-email.service';
 import { env, isProd } from '../config/env';
 import { logger } from '../common/logger/logger';
@@ -68,10 +69,12 @@ export function buildContainer(): AppContainer {
   const settingsRepository = new SettingsRepository();
 
   // Infrastructure services
-  // Resend (HTTPS API) takes priority — SMTP ports are commonly blocked outbound on hosts like
+  // Brevo, then Resend (HTTPS APIs) take priority — SMTP ports are commonly blocked outbound on hosts like
   // Render, so RESEND_API_KEY is the one that actually works in production there.
   let emailService: IEmailService;
-  if (env.RESEND_API_KEY) {
+  if (env.BREVO_API_KEY) {
+    emailService = new BrevoEmailService();
+  } else if (env.RESEND_API_KEY) {
     emailService = new ResendEmailService();
   } else if (env.SMTP_USER && env.SMTP_PASS) {
     emailService = new SmtpEmailService();
@@ -80,7 +83,7 @@ export function buildContainer(): AppContainer {
     // never fail silently — ConsoleEmailService only logs, it never actually sends anything.
     if (isProd) {
       logger.warn(
-        'Neither RESEND_API_KEY nor SMTP_USER/SMTP_PASS are set — running with ' +
+        'None of BREVO_API_KEY, RESEND_API_KEY, or SMTP_USER/SMTP_PASS are set — running with ' +
           'ConsoleEmailService in production, so password reset, OTP, and order emails will ' +
           'NOT be delivered. Set them on the host (e.g. Render → Environment), not just in the ' +
           'local .env file.',
