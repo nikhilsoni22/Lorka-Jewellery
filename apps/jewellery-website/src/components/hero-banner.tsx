@@ -26,8 +26,14 @@ export function HeroBanner({
   const href = banner?.href || '/#categories';
 
   return (
-    <section className={transparent ? 'overflow-hidden' : 'overflow-hidden bg-background'}>
-      <div className="container py-20 sm:py-28 lg:py-36">
+    <section
+      className={
+        transparent
+          ? 'festival-hero flex min-h-[calc(100svh-5rem)] items-center overflow-hidden'
+          : 'overflow-hidden bg-background'
+      }
+    >
+      <div className="container w-full py-20 sm:py-28 lg:py-36">
         <div className="text-center lg:max-w-2xl lg:text-left">
           <p className="text-xs font-medium uppercase tracking-[0.4em] text-gold">Timeless Beauty</p>
           <h1 className="mt-5 text-4xl leading-tight text-foreground sm:text-5xl lg:text-6xl">{title}</h1>

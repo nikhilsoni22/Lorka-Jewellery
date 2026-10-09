@@ -37,7 +37,7 @@ function NavDropdown({
         {label}
         <ChevronDown className="h-3 w-3" strokeWidth={2} />
       </button>
-      <div className="invisible absolute left-1/2 top-full z-50 min-w-[180px] -translate-x-1/2 translate-y-1 rounded-sm border border-border bg-card py-2 opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+      <div className="site-dropdown invisible absolute left-1/2 top-full z-50 min-w-[180px] -translate-x-1/2 translate-y-1 rounded-sm border border-border bg-card py-2 opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
         {items.length === 0 && emptyLabel ? (
           <span className="block whitespace-nowrap px-4 py-1.5 text-xs normal-case tracking-normal text-muted-foreground">
             {emptyLabel}

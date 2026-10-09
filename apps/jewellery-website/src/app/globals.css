@@ -81,13 +81,30 @@
     border-color: transparent;
     backdrop-filter: none;
   }
+  /* Light text over the festival video — header while at the top, and the hero. */
+  html[data-festival-top] .site-header,
+  .festival-hero {
+    --foreground: 0 0% 100%;
+    --background: 0 0% 8%;
+    --muted-foreground: 0 0% 94%;
+  }
+  html[data-festival-top] .site-header .site-dropdown {
+    --foreground: 0 0% 12%;
+    --background: 36 43% 97%;
+  }
+  .festival-hero h1,
+  .festival-hero p,
+  html[data-festival-top] .site-header nav,
+  html[data-festival-top] .site-header .font-serif {
+    text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
+  }
   .festival-blur {
-    mask-image: linear-gradient(to bottom, transparent 30%, black 65%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 30%, black 65%);
+    mask-image: linear-gradient(to bottom, transparent 45%, black 85%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 45%, black 85%);
   }
   .festival-blur-strong {
-    mask-image: linear-gradient(to bottom, transparent 60%, black 95%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 60%, black 95%);
+    mask-image: linear-gradient(to bottom, transparent 75%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 75%, black 100%);
   }
   h1,
   h2,
