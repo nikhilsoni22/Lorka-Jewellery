@@ -36,11 +36,17 @@ export const maintenanceInputSchema = z
     }
   });
 
+export const paymentMethodsInputSchema = z.object({
+  onlineEnabled: z.boolean().optional().default(true),
+  codEnabled: z.boolean().optional().default(true),
+});
+
 export const updateSettingsSchema = z.object({
   silverRatePerKg: z.coerce.number().nonnegative('Silver rate must be 0 or greater'),
   goldRatePer10g: z.coerce.number().nonnegative('Gold rate must be 0 or greater'),
   charges: z.array(chargeInputSchema).max(20),
   maintenance: maintenanceInputSchema,
+  paymentMethods: paymentMethodsInputSchema.optional().default({}),
   notificationEmail: z
     .string()
     .trim()

@@ -8,6 +8,7 @@ export default async function MaintenancePage() {
       goldRatePer10g: 0,
       charges: [],
       maintenance: { enabled: true, message: '' },
+      paymentMethods: { onlineEnabled: true, codEnabled: true },
     }),
   );
   const { message, endAt } = settings.maintenance;

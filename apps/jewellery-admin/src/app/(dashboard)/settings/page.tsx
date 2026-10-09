@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [goldRatePer10g, setGoldRatePer10g] = useState('0');
   const [charges, setCharges] = useState<ChargeRow[]>([]);
   const [maintenance, setMaintenance] = useState({ enabled: false, startAt: '', endAt: '', message: '' });
+  const [paymentMethods, setPaymentMethods] = useState({ onlineEnabled: true, codEnabled: true });
   const [notificationEmail, setNotificationEmail] = useState('');
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
@@ -59,6 +60,10 @@ export default function SettingsPage() {
       startAt: toDatetimeLocal(data.maintenance.startAt),
       endAt: toDatetimeLocal(data.maintenance.endAt),
       message: data.maintenance.message,
+    });
+    setPaymentMethods({
+      onlineEnabled: data.paymentMethods?.onlineEnabled ?? true,
+      codEnabled: data.paymentMethods?.codEnabled ?? true,
     });
     setNotificationEmail(data.notificationEmail ?? '');
     setRazorpayKeyId(data.razorpayKeyId ?? '');
@@ -99,6 +104,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!paymentMethods.onlineEnabled && !paymentMethods.codEnabled) {
+      toast.error('Keep at least one payment method enabled, or customers cannot place orders');
+      return;
+    }
+
     updateSettings.mutate(
       {
         silverRatePerKg: Number(silverRatePerKg),
@@ -116,6 +126,7 @@ export default function SettingsPage() {
           endAt: maintenance.endAt ? new Date(maintenance.endAt) : undefined,
           message: maintenance.message,
         },
+        paymentMethods,
         notificationEmail: notificationEmail.trim() || undefined,
         razorpayKeyId: razorpayKeyId.trim() || undefined,
         razorpayKeySecret: razorpayKeySecret.trim() || undefined,
@@ -290,6 +301,37 @@ export default function SettingsPage() {
               placeholder="We'll be back shortly — thanks for your patience."
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Payment Methods</CardTitle>
+          <CardDescription>
+            Choose which payment options customers see at checkout. A disabled method is hidden on the
+            website and also rejected by the server. At least one must stay enabled.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={paymentMethods.onlineEnabled}
+              onChange={(e) => setPaymentMethods((m) => ({ ...m, onlineEnabled: e.target.checked }))}
+            />
+            Online payment (Razorpay — card / UPI / netbanking)
+          </label>
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={paymentMethods.codEnabled}
+              onChange={(e) => setPaymentMethods((m) => ({ ...m, codEnabled: e.target.checked }))}
+            />
+            Cash on Delivery
+          </label>
+          {paymentMethods.onlineEnabled && !razorpayKeyId.trim() && (
+            <p className="text-xs text-destructive">
+              Online payment is enabled but no Razorpay keys are set below, so it will fail at checkout.
+            </p>
+          )}
         </CardContent>
       </Card>
 

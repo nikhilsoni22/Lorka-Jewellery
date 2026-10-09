@@ -181,6 +181,7 @@ export class FakeSettingsRepository implements ISettingsRepository {
     goldRatePer10g: 70000,
     charges: [],
     maintenance: { enabled: false, message: '' },
+    paymentMethods: { onlineEnabled: true, codEnabled: true },
     createdAt: new Date(),
     updatedAt: new Date(),
   };

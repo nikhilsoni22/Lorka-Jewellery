@@ -10,6 +10,7 @@ import type {
   TicketEntity,
   SettingsEntity,
   MaintenanceEntity,
+  PaymentMethodsEntity,
 } from './entities';
 
 export interface CreateUserData {
@@ -198,6 +199,7 @@ export interface UpdateSettingsData {
   goldRatePer10g: number;
   charges: UpdateChargeData[];
   maintenance: UpdateMaintenanceData;
+  paymentMethods: PaymentMethodsEntity;
   notificationEmail?: string;
   razorpayKeyId?: string;
   razorpayKeySecret?: string;

@@ -156,12 +156,18 @@ export interface MaintenanceEntity {
   message: string;
 }
 
+export interface PaymentMethodsEntity {
+  onlineEnabled: boolean;
+  codEnabled: boolean;
+}
+
 export interface SettingsEntity {
   id: string;
   silverRatePerKg: number;
   goldRatePer10g: number;
   charges: ChargeEntity[];
   maintenance: MaintenanceEntity;
+  paymentMethods: PaymentMethodsEntity;
   notificationEmail?: string;
   razorpayKeyId?: string;
   razorpayKeySecret?: string;

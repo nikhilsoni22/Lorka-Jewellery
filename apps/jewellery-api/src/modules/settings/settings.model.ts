@@ -21,12 +21,21 @@ const maintenanceSchema = new Schema(
   { _id: false },
 );
 
+const paymentMethodsSchema = new Schema(
+  {
+    onlineEnabled: { type: Boolean, default: true },
+    codEnabled: { type: Boolean, default: true },
+  },
+  { _id: false },
+);
+
 const settingsSchema = new Schema(
   {
     silverRatePerKg: { type: Number, default: 0, min: 0 },
     goldRatePer10g: { type: Number, default: 0, min: 0 },
     charges: { type: [chargeSchema], default: [] },
     maintenance: { type: maintenanceSchema, default: () => ({}) },
+    paymentMethods: { type: paymentMethodsSchema, default: () => ({}) },
     notificationEmail: { type: String, default: '' },
     razorpayKeyId: { type: String, default: '' },
     razorpayKeySecret: { type: String, default: '' },

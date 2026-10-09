@@ -25,6 +25,10 @@ export function toSettingsResponse(
       endAt: settings.maintenance.endAt ? settings.maintenance.endAt.toISOString() : undefined,
       message: settings.maintenance.message,
     },
+    paymentMethods: {
+      onlineEnabled: settings.paymentMethods.onlineEnabled,
+      codEnabled: settings.paymentMethods.codEnabled,
+    },
     notificationEmail: settings.notificationEmail,
     ...(includeRazorpayKeys
       ? { razorpayKeyId: settings.razorpayKeyId, razorpayKeySecret: settings.razorpayKeySecret }
@@ -56,6 +60,10 @@ export class SettingsService {
         startAt: input.maintenance.startAt ?? null,
         endAt: input.maintenance.endAt ?? null,
         message: input.maintenance.message ?? '',
+      },
+      paymentMethods: {
+        onlineEnabled: input.paymentMethods.onlineEnabled ?? true,
+        codEnabled: input.paymentMethods.codEnabled ?? true,
       },
       notificationEmail: input.notificationEmail,
       razorpayKeyId: input.razorpayKeyId,

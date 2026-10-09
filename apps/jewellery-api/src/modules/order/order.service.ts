@@ -52,6 +52,14 @@ export class OrderService {
   async create(input: CreateOrderInput, userId?: string): Promise<OrderResponse> {
     const settings = await this.settingsRepo.get();
 
+    const requestedMethod = input.paymentMethod ?? PaymentMethod.Cod;
+    if (requestedMethod === PaymentMethod.Cod && !settings.paymentMethods.codEnabled) {
+      throw AppError.badRequest('Cash on delivery is currently unavailable. Please choose another payment method.');
+    }
+    if (requestedMethod === PaymentMethod.Razorpay && !settings.paymentMethods.onlineEnabled) {
+      throw AppError.badRequest('Online payment is currently unavailable. Please choose another payment method.');
+    }
+
     if (input.paymentMethod === PaymentMethod.Razorpay) {
       const valid =
         input.razorpayOrderId &&

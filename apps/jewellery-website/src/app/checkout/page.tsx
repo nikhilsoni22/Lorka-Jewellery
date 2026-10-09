@@ -126,6 +126,8 @@ function CheckoutForm() {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
+  const onlineEnabled = settings?.paymentMethods?.onlineEnabled ?? true;
+  const codEnabled = settings?.paymentMethods?.codEnabled ?? true;
   const [form, setForm] = useState({
     customerName: '',
     customerPhone: '',
@@ -244,9 +246,16 @@ function CheckoutForm() {
           goldRatePer10g: 0,
           charges: [],
           maintenance: { enabled: false, message: '' },
+          paymentMethods: { onlineEnabled: true, codEnabled: true },
         }),
       );
   }, []);
+
+  // Keep the selection on a method the admin hasn't disabled.
+  useEffect(() => {
+    if (paymentMethod === 'razorpay' && !onlineEnabled && codEnabled) setPaymentMethod('cod');
+    if (paymentMethod === 'cod' && !codEnabled && onlineEnabled) setPaymentMethod('razorpay');
+  }, [paymentMethod, onlineEnabled, codEnabled]);
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -540,40 +549,49 @@ function CheckoutForm() {
           <div>
             <label className="text-sm font-medium">Payment Method</label>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <label
-                className={cn(
-                  'flex flex-1 cursor-pointer items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors',
-                  paymentMethod === 'razorpay' ? 'border-gold bg-secondary/50' : 'border-border',
-                )}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  className="accent-gold"
-                  checked={paymentMethod === 'razorpay'}
-                  onChange={() => setPaymentMethod('razorpay')}
-                />
-                Pay Online (Card / UPI / Netbanking)
-              </label>
-              <label
-                className={cn(
-                  'flex flex-1 cursor-pointer items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors',
-                  paymentMethod === 'cod' ? 'border-gold bg-secondary/50' : 'border-border',
-                )}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  className="accent-gold"
-                  checked={paymentMethod === 'cod'}
-                  onChange={() => setPaymentMethod('cod')}
-                />
-                Cash on Delivery
-              </label>
+              {onlineEnabled && (
+                <label
+                  className={cn(
+                    'flex flex-1 cursor-pointer items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors',
+                    paymentMethod === 'razorpay' ? 'border-gold bg-secondary/50' : 'border-border',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    className="accent-gold"
+                    checked={paymentMethod === 'razorpay'}
+                    onChange={() => setPaymentMethod('razorpay')}
+                  />
+                  Pay Online (Card / UPI / Netbanking)
+                </label>
+              )}
+              {codEnabled && (
+                <label
+                  className={cn(
+                    'flex flex-1 cursor-pointer items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors',
+                    paymentMethod === 'cod' ? 'border-gold bg-secondary/50' : 'border-border',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    className="accent-gold"
+                    checked={paymentMethod === 'cod'}
+                    onChange={() => setPaymentMethod('cod')}
+                  />
+                  Cash on Delivery
+                </label>
+              )}
+              {!onlineEnabled && !codEnabled && (
+                <p className="text-sm text-destructive">
+                  Orders are temporarily unavailable. Please try again later.
+                </p>
+              )}
             </div>
           </div>
 
-          <Button type="submit" disabled={submitting || !cityAllowed} className="w-full sm:w-auto">
+          <Button type="submit" disabled={submitting || !cityAllowed || (!onlineEnabled && !codEnabled)} className="w-full sm:w-auto">
             {submitting
               ? paymentMethod === 'razorpay'
                 ? 'Processing payment…'

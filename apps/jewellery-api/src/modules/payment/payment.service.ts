@@ -16,6 +16,9 @@ export class PaymentService {
 
   async createRazorpayOrder(items: CreateRazorpayOrderInput['items']): Promise<RazorpayOrderResponse> {
     const settings = await this.settingsRepo.get();
+    if (!settings.paymentMethods.onlineEnabled) {
+      throw AppError.badRequest('Online payment is currently unavailable.');
+    }
     if (!settings.razorpayKeyId || !settings.razorpayKeySecret) {
       throw AppError.badRequest('Online payment is not configured yet. Add your Razorpay keys in Settings.');
     }

@@ -22,6 +22,10 @@ function toEntity(doc: SettingsDocument): SettingsEntity {
       endAt: doc.maintenance?.endAt ?? null,
       message: doc.maintenance?.message ?? '',
     },
+    paymentMethods: {
+      onlineEnabled: doc.paymentMethods?.onlineEnabled ?? true,
+      codEnabled: doc.paymentMethods?.codEnabled ?? true,
+    },
     notificationEmail: doc.notificationEmail || undefined,
     razorpayKeyId: doc.razorpayKeyId || undefined,
     razorpayKeySecret: doc.razorpayKeySecret || undefined,
@@ -68,6 +72,10 @@ export class SettingsRepository implements ISettingsRepository {
       startAt: data.maintenance.startAt ?? null,
       endAt: data.maintenance.endAt ?? null,
       message: data.maintenance.message,
+    });
+    doc.set('paymentMethods', {
+      onlineEnabled: data.paymentMethods.onlineEnabled,
+      codEnabled: data.paymentMethods.codEnabled,
     });
     doc.set('notificationEmail', data.notificationEmail ?? '');
     doc.set('razorpayKeyId', data.razorpayKeyId ?? '');
