@@ -9,13 +9,17 @@ const objectId = z.string().trim().regex(/^[a-f\d]{24}$/i, 'Invalid id');
  * - Blank field ('') → `null`: the admin explicitly cleared the offer, so it must be written
  *   to the update payload — Mongoose silently drops `undefined`-valued keys on update, which is
  *   why clearing the field previously left the old offer in place instead of removing it.
+ * - null → same as blank (no offer).
  * - A number → that percentage. */
 const optionalDiscountPercent = z
   .union([
     z.literal(''),
+    // The admin form already converts a blank field to null before sending it; accept that
+    // here too, otherwise null is coerced to 0 and rejected as "greater than 0".
+    z.null(),
     z.coerce.number().positive('Offer must be greater than 0').max(100, 'Offer cannot exceed 100%'),
   ])
-  .transform((v) => (v === '' ? null : v))
+  .transform((v) => (v === '' || v === null ? null : v))
   .optional();
 
 export const createProductSchema = z.object({
