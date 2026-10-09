@@ -31,6 +31,42 @@ const bannerUpload = multer({
   fileFilter: imageFileFilter,
 });
 
+const FESTIVAL_MIME_TYPES = new Set([
+  'image/gif',
+  'image/webp',
+  'image/png',
+  'image/jpeg',
+  'video/mp4',
+  'video/webm',
+]);
+
+const festivalUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!FESTIVAL_MIME_TYPES.has(file.mimetype)) {
+      cb(AppError.badRequest('Only GIF, WEBP, PNG, JPG, MP4 or WEBM files are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+/** Accepts one GIF/image/video (up to 20MB) under the `media` field — for the festival overlay. */
+export function festivalMediaUpload(req: Request, res: Response, next: NextFunction): void {
+  festivalUpload.single('media')(req, res, (err: unknown) => {
+    if (!err) {
+      next();
+      return;
+    }
+    if (err instanceof multer.MulterError) {
+      next(AppError.badRequest(err.message));
+      return;
+    }
+    next(err);
+  });
+}
+
 /** Accepts up to 6 images under the `images` field; converts multer's own errors into AppError. */
 export function productImagesUpload(req: Request, res: Response, next: NextFunction): void {
   productsUpload.array('images', 6)(req, res, (err: unknown) => {

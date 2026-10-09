@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { Loader2, UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ApiResponse } from '@lorka/types';
+import { isVideoUrl, type ApiResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { extractMessage } from '@/lib/api-utils';
@@ -14,6 +14,10 @@ export function SingleImageUpload({
   onChange,
   uploadPath,
   previewClassName = 'aspect-video',
+  fieldName = 'image',
+  accept = 'image/jpeg,image/png,image/webp,image/gif',
+  hint = 'JPG, PNG, WEBP or GIF, up to 5MB.',
+  noun = 'image',
 }: {
   value: string;
   onChange: (url: string) => void;
@@ -21,6 +25,12 @@ export function SingleImageUpload({
   uploadPath: string;
   /** Aspect ratio class for the preview box. */
   previewClassName?: string;
+  /** Multipart field name the endpoint expects ('image' for most, 'media' for festival uploads). */
+  fieldName?: string;
+  accept?: string;
+  hint?: string;
+  /** Word used in the button/toasts, e.g. 'image' or 'GIF / video'. */
+  noun?: string;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,7 +40,7 @@ export function SingleImageUpload({
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append(fieldName, file);
 
     setIsUploading(true);
     try {
@@ -39,7 +49,7 @@ export function SingleImageUpload({
         onChange(data.data.url);
       }
     } catch (err) {
-      toast.error(extractMessage(err, 'Failed to upload image'));
+      toast.error(extractMessage(err, `Failed to upload ${noun}`));
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -51,15 +61,19 @@ export function SingleImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept={accept}
         className="hidden"
         onChange={(e) => uploadFile(e.target.files)}
       />
 
       {value && (
         <div className={`group relative ${previewClassName} w-full max-w-xs overflow-hidden rounded-md border border-border`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="" className="h-full w-full object-cover" />
+          {isVideoUrl(value) ? (
+            <video src={value} autoPlay muted loop playsInline className="h-full w-full object-cover" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={value} alt="" className="h-full w-full object-cover" />
+          )}
           <button
             type="button"
             onClick={() => onChange('')}
@@ -82,10 +96,10 @@ export function SingleImageUpload({
         ) : (
           <UploadCloud className="h-4 w-4" />
         )}
-        {isUploading ? 'Uploading…' : value ? 'Replace image' : 'Upload image'}
+        {isUploading ? 'Uploading…' : value ? `Replace ${noun}` : `Upload ${noun}`}
       </Button>
 
-      <p className="text-xs text-muted-foreground">JPG, PNG, WEBP or GIF, up to 5MB.</p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }

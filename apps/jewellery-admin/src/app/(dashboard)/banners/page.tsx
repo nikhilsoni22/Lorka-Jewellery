@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { BannerResponse } from '@lorka/types';
+import { isVideoUrl, type BannerResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -81,12 +81,21 @@ export default function BannersPage() {
               <TableRow key={banner.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={banner.image}
-                      alt=""
-                      className="h-10 w-16 rounded-md border border-border object-cover"
-                    />
+                    {isVideoUrl(banner.image) ? (
+                      <video
+                        src={banner.image}
+                        muted
+                        playsInline
+                        className="h-10 w-16 rounded-md border border-border object-cover"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={banner.image}
+                        alt=""
+                        className="h-10 w-16 rounded-md border border-border object-cover"
+                      />
+                    )}
                     <span className="font-medium">{banner.title}</span>
                   </div>
                 </TableCell>

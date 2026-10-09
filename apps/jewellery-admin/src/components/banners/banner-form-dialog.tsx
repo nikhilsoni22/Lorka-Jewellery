@@ -33,6 +33,17 @@ const emptyDefaults: CreateBannerInput = {
   isActive: true,
 };
 
+/** ISO string -> value for <input type="datetime-local"> in the admin's local time. */
+function toDatetimeLocal(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Blank -> null (clears the date on update), otherwise a Date. */
+const dateOrNull = (v: unknown) => (v ? new Date(String(v)) : null);
+
 export function BannerFormDialog({
   open,
   onOpenChange,
@@ -59,6 +70,8 @@ export function BannerFormDialog({
   });
 
   const image = watch('image');
+  const placement = watch('placement');
+  const isFestival = placement === 'festival';
 
   useEffect(() => {
     if (open) {
@@ -69,9 +82,12 @@ export function BannerFormDialog({
               subtitle: banner.subtitle,
               image: banner.image,
               href: banner.href,
-              placement: banner.placement as 'hero' | 'promo',
+              placement: banner.placement,
               sortOrder: banner.sortOrder,
               isActive: banner.isActive,
+              // datetime-local needs a string; setValueAs below turns it back into a Date.
+              startDate: toDatetimeLocal(banner.startDate) as unknown as Date,
+              endDate: toDatetimeLocal(banner.endDate) as unknown as Date,
             }
           : emptyDefaults,
       );
@@ -98,7 +114,7 @@ export function BannerFormDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Banner' : 'Add Banner'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Update this banner.' : 'Create a new homepage banner.'}
+            {isEditing ? 'Update this banner.' : 'Create a homepage banner or a festival overlay.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -115,9 +131,17 @@ export function BannerFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Banner Image</Label>
+            <Label>{isFestival ? 'Festival GIF / Video' : 'Banner Image'}</Label>
             <SingleImageUpload
-              uploadPath="/uploads/banners"
+              uploadPath={isFestival ? '/uploads/festival' : '/uploads/banners'}
+              {...(isFestival
+                ? {
+                    fieldName: 'media',
+                    accept: 'image/gif,image/webp,image/png,image/jpeg,video/mp4,video/webm',
+                    hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 20MB. Transparent GIFs/WEBM look best.',
+                    noun: 'GIF / video',
+                  }
+                : {})}
               value={image}
               onChange={(url) => setValue('image', url, { shouldValidate: true, shouldDirty: true })}
             />
@@ -135,11 +159,39 @@ export function BannerFormDialog({
               <Select id="ban-placement" {...register('placement')}>
                 <option value="hero">Hero (homepage top)</option>
                 <option value="promo">Promo</option>
+                <option value="festival">Festival overlay (full-screen GIF / video)</option>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ban-sort">Sort order</Label>
               <Input id="ban-sort" type="number" {...register('sortOrder')} />
+            </div>
+          </div>
+
+          {isFestival && (
+            <p className="rounded-md border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
+              The festival overlay covers the whole website (header and page) with a blur while your
+              GIF/video plays, once per visitor per session. Set Starts/Ends so it appears only during
+              the festival. If several are live, the one with the lowest sort order is shown.
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ban-start">Starts at (optional)</Label>
+              <Input
+                id="ban-start"
+                type="datetime-local"
+                {...register('startDate', { setValueAs: dateOrNull })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ban-end">Ends at (optional)</Label>
+              <Input
+                id="ban-end"
+                type="datetime-local"
+                {...register('endDate', { setValueAs: dateOrNull })}
+              />
             </div>
           </div>
 

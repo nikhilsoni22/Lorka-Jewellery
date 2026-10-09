@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Toaster } from 'sonner';
 import './globals.css';
 import { SiteHeader } from '@/components/site-header';
 import { CartProvider } from '@/lib/cart-context';
 import { AuthProvider } from '@/lib/auth-context';
 import { NavigationProgress } from '@/components/navigation-progress';
+import { FestivalOverlayLoader } from '@/components/festival-overlay-loader';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 const TITLE = 'Lorka Jewellers — Fine Silver Jewellery';
@@ -43,6 +45,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </CartProvider>
         </AuthProvider>
+        <Suspense fallback={null}>
+          <FestivalOverlayLoader />
+        </Suspense>
         <Toaster position="top-center" />
       </body>
     </html>

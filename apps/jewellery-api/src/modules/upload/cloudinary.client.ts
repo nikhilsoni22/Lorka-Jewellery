@@ -13,7 +13,11 @@ function signParams(params: Record<string, string>): string {
 
 /** Uploads an image buffer to Cloudinary and returns its permanent, publicly-addressable URL —
  * unlike the local disk, this survives host restarts and redeploys. */
-export async function uploadImageToCloudinary(buffer: Buffer, folder: string): Promise<string> {
+export async function uploadImageToCloudinary(
+  buffer: Buffer,
+  folder: string,
+  resourceType: 'image' | 'auto' = 'image',
+): Promise<string> {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = signParams({ folder, timestamp });
 
@@ -26,7 +30,7 @@ export async function uploadImageToCloudinary(buffer: Buffer, folder: string): P
 
   let res: Response;
   try {
-    res = await fetch(`https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    res = await fetch(`https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`, {
       method: 'POST',
       body: form,
     });

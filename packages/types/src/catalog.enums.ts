@@ -1,6 +1,8 @@
 export enum BannerPlacement {
   Hero = 'hero',
   Promo = 'promo',
+  /** Full-screen GIF/video popup over the whole storefront (festival greetings). */
+  Festival = 'festival',
 }
 
 export const BANNER_PLACEMENTS = Object.values(BannerPlacement);
