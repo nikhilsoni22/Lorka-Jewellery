@@ -16,6 +16,31 @@ function mapsNavigationUrl(order: OrderResponse): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
 }
 
+/** The server runs in UTC, so bare toLocaleString() printed UTC time in US format (month/day).
+ * Pin everything to India time and day/month/year. */
+const EMAIL_TIME_ZONE = 'Asia/Kolkata';
+
+function formatDateTime(value: string | Date): string {
+  return new Date(value).toLocaleString('en-IN', {
+    timeZone: EMAIL_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function formatDate(value: string | Date): string {
+  return new Date(value).toLocaleDateString('en-IN', {
+    timeZone: EMAIL_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 function renderOrderConfirmationHtml(
   order: OrderResponse,
   audience: 'customer' | 'admin' = 'customer',
@@ -43,7 +68,9 @@ function renderOrderConfirmationHtml(
   const heading =
     audience === 'admin'
       ? `<h1 style="font-size:22px;">New order received — ${order.orderNumber}</h1>
-         <p>Placed by ${order.customerName} (${order.customerEmail || order.customerPhone}).</p>`
+         <p style="margin:4px 0;">Placed by <strong>${order.customerName}</strong></p>
+         <p style="margin:4px 0;">Phone: <a href="tel:${order.customerPhone}">${order.customerPhone}</a></p>
+         ${order.customerEmail ? `<p style="margin:4px 0;">Email: <a href="mailto:${order.customerEmail}">${order.customerEmail}</a></p>` : ''}`
       : `<h1 style="font-size:22px;">Thank you for your order, ${order.customerName}! 🎉</h1>
          <p>Congratulations on your new piece from Lorka Jewellers — we're preparing it with care.</p>`;
 
@@ -52,7 +79,7 @@ function renderOrderConfirmationHtml(
       ${heading}
 
       <h2 style="font-size:16px;margin-top:24px;">Invoice — ${order.orderNumber}</h2>
-      <p style="color:#666;font-size:13px;">Placed on ${new Date(order.createdAt).toLocaleString()}</p>
+      <p style="color:#666;font-size:13px;">Placed on ${formatDateTime(order.createdAt)}</p>
 
       <table style="width:100%;border-collapse:collapse;margin-top:12px;">
         <tbody>${itemRows}</tbody>
@@ -106,7 +133,7 @@ function renderBuildEtaHtml(order: OrderResponse): string {
       <h2 style="font-size:16px;margin-top:24px;">Order ${order.orderNumber}</h2>
       ${
         eta
-          ? `<p>Expected ready by <strong>${eta.toLocaleDateString()}</strong>${
+          ? `<p>Expected ready by <strong>${formatDate(eta)}</strong>${
               daysFromNow !== null ? ` (about ${daysFromNow} day${daysFromNow === 1 ? '' : 's'} from now)` : ''
             }.</p>`
           : `<p>We'll follow up shortly with a confirmed date.</p>`
