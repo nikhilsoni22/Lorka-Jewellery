@@ -63,6 +63,7 @@ export function BannerFormDialog({
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateBannerInput>({
     resolver: zodResolver(createBannerSchema),
@@ -94,7 +95,13 @@ export function BannerFormDialog({
     }
   }, [open, banner, reset]);
 
-  const submit = handleSubmit(async (values) => {
+  const submit = handleSubmit(async (formValues) => {
+    // Hero banners are text-only; every other placement needs an image / GIF / video.
+    const values = formValues.placement === 'hero' ? { ...formValues, image: '' } : formValues;
+    if (values.placement !== 'hero' && !values.image) {
+      setError('image', { message: 'Please upload an image, GIF or video' });
+      return;
+    }
     try {
       if (isEditing) {
         await updateBanner.mutateAsync(values);
@@ -114,7 +121,9 @@ export function BannerFormDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Banner' : 'Add Banner'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Update this banner.' : 'Create a homepage banner or a festival background.'}
+            {isEditing
+              ? 'Update this banner.'
+              : 'Create a homepage banner or a festival background.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -130,23 +139,27 @@ export function BannerFormDialog({
             <Input id="ban-subtitle" {...register('subtitle')} />
           </div>
 
-          <div className="space-y-2">
-            <Label>{isFestival ? 'Festival GIF / Video' : 'Banner Image'}</Label>
-            <SingleImageUpload
-              uploadPath={isFestival ? '/uploads/festival' : '/uploads/banners'}
-              {...(isFestival
-                ? {
-                    fieldName: 'media',
-                    accept: 'image/gif,image/webp,image/png,image/jpeg,video/mp4,video/webm',
-                    hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 20MB. Landscape (16:9) looks best.',
-                    noun: 'GIF / video',
-                  }
-                : {})}
-              value={image}
-              onChange={(url) => setValue('image', url, { shouldValidate: true, shouldDirty: true })}
-            />
-            {errors.image && <p className="text-sm text-destructive">{errors.image.message}</p>}
-          </div>
+          {placement !== 'hero' && (
+            <div className="space-y-2">
+              <Label>{isFestival ? 'Festival GIF / Video' : 'Banner Image'}</Label>
+              <SingleImageUpload
+                uploadPath={isFestival ? '/uploads/festival' : '/uploads/banners'}
+                {...(isFestival
+                  ? {
+                      fieldName: 'media',
+                      accept: 'image/gif,image/webp,image/png,image/jpeg,video/mp4,video/webm',
+                      hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 20MB. Landscape (16:9) looks best.',
+                      noun: 'GIF / video',
+                    }
+                  : {})}
+                value={image}
+                onChange={(url) =>
+                  setValue('image', url, { shouldValidate: true, shouldDirty: true })
+                }
+              />
+              {errors.image && <p className="text-sm text-destructive">{errors.image.message}</p>}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="ban-href">Link (optional)</Label>
@@ -170,10 +183,10 @@ export function BannerFormDialog({
 
           {isFestival && (
             <p className="rounded-md border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
-              Your GIF/video plays in the background of the homepage top section (behind the header and
-              hero), getting softly blurred towards the bottom and fading into the page. Landscape
-              videos work best. Set Starts/Ends so it appears only during the festival. If several are
-              live, the one with the lowest sort order is shown.
+              Your GIF/video plays in the background of the homepage top section (behind the header
+              and hero), getting softly blurred towards the bottom and fading into the page.
+              Landscape videos work best. Set Starts/Ends so it appears only during the festival. If
+              several are live, the one with the lowest sort order is shown.
             </p>
           )}
 

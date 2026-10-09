@@ -46,14 +46,29 @@ export class BannerService {
   }
 
   async create(input: CreateBannerInput): Promise<BannerResponse> {
+    this.assertImageForPlacement(input.placement, input.image);
     const banner = await this.banners.create(input);
     return toBannerResponse(banner);
   }
 
   async update(id: string, input: UpdateBannerInput): Promise<BannerResponse> {
+    if (input.image !== undefined) {
+      const existing = await this.banners.findById(id);
+      if (!existing) throw AppError.notFound('Banner not found');
+      this.assertImageForPlacement(input.placement ?? existing.placement, input.image);
+    }
     const updated = await this.banners.update(id, input);
     if (!updated) throw AppError.notFound('Banner not found');
     return toBannerResponse(updated);
+  }
+
+  /** Hero banners are text-only; promo and festival banners need an image/GIF/video. */
+  private assertImageForPlacement(placement: string, image: string | undefined): void {
+    if (placement !== 'hero' && !image) {
+      throw AppError.badRequest('An image is required for this banner placement', {
+        image: ['An image is required for this banner placement'],
+      });
+    }
   }
 
   async delete(id: string): Promise<void> {

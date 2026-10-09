@@ -5,7 +5,7 @@ const bannerSchema = new Schema(
   {
     title: { type: String, required: true, trim: true },
     subtitle: { type: String, default: '' },
-    image: { type: String, required: true },
+    image: { type: String, default: '' },
     href: { type: String, default: '' },
     placement: { type: String, enum: BANNER_PLACEMENTS, required: true, index: true },
     sortOrder: { type: Number, default: 0 },

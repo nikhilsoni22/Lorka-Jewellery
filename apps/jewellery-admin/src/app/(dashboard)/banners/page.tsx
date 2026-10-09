@@ -6,7 +6,14 @@ import { toast } from 'sonner';
 import { isVideoUrl, type BannerResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -81,7 +88,11 @@ export default function BannersPage() {
               <TableRow key={banner.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    {isVideoUrl(banner.image) ? (
+                    {!banner.image ? (
+                      <span className="flex h-10 w-16 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground">
+                        Text only
+                      </span>
+                    ) : isVideoUrl(banner.image) ? (
                       <video
                         src={banner.image}
                         muted
@@ -99,7 +110,9 @@ export default function BannersPage() {
                     <span className="font-medium">{banner.title}</span>
                   </div>
                 </TableCell>
-                <TableCell className="capitalize text-muted-foreground">{banner.placement}</TableCell>
+                <TableCell className="capitalize text-muted-foreground">
+                  {banner.placement}
+                </TableCell>
                 <TableCell className="text-muted-foreground">{banner.sortOrder}</TableCell>
                 <TableCell>
                   <Badge variant={banner.isActive ? 'success' : 'muted'}>
@@ -108,7 +121,12 @@ export default function BannersPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(banner)} aria-label="Edit banner">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(banner)}
+                      aria-label="Edit banner"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -133,12 +151,16 @@ export default function BannersPage() {
 
       <BannerFormDialog open={formOpen} onOpenChange={setFormOpen} banner={editing} />
 
-      <Dialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete banner?</DialogTitle>
             <DialogDescription>
-              This will permanently remove &ldquo;{pendingDelete?.title}&rdquo;. This cannot be undone.
+              This will permanently remove &ldquo;{pendingDelete?.title}&rdquo;. This cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

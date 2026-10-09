@@ -95,7 +95,7 @@ export const openApiSpec = {
       },
       BannerInput: {
         type: 'object',
-        required: ['title', 'image', 'placement'],
+        required: ['title', 'placement'],
         properties: {
           title: { type: 'string', example: 'Festive Silver Collection' },
           subtitle: { type: 'string' },
