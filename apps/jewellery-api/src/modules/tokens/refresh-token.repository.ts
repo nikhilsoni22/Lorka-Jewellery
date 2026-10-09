@@ -19,6 +19,8 @@ function toEntity(doc: RefreshTokenDocument): RefreshTokenEntity {
   };
 }
 
+const ROTATION_GRACE_MS = 30_000;
+
 export class RefreshTokenRepository implements IRefreshTokenRepository {
   async create(data: CreateRefreshTokenData): Promise<RefreshTokenEntity> {
     const doc = await RefreshTokenModel.create(data);
@@ -26,9 +28,13 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
   }
 
   async findActiveByHash(tokenHash: string, now: Date): Promise<RefreshTokenEntity | null> {
+    // A token rotated a moment ago is still accepted for a short grace window: several tabs or
+    // parallel requests refresh with the same cookie at once, and without this the losers of the
+    // race get "invalid token" and the admin is logged out.
+    const graceCutoff = new Date(now.getTime() - ROTATION_GRACE_MS);
     const doc = await RefreshTokenModel.findOne({
       tokenHash,
-      revokedAt: null,
+      $or: [{ revokedAt: null }, { revokedAt: { $gt: graceCutoff } }],
       expiresAt: { $gt: now },
     })
       .lean<RefreshTokenDocument>()

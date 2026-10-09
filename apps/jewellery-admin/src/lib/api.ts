@@ -8,8 +8,28 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1
  * radius. Session continuity across reloads comes from the httpOnly refresh cookie.
  */
 let accessToken: string | null = null;
+let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Reads the `exp` claim (ms epoch) from a JWT without verifying it. */
+function tokenExpiryMs(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
+  if (typeof window === 'undefined') return;
+  clearTimeout(refreshTimer);
+  const exp = token ? tokenExpiryMs(token) : null;
+  if (exp) {
+    // Renew a minute before expiry so an open admin page never hits an expired token.
+    const delay = Math.max(exp - Date.now() - 60_000, 5_000);
+    refreshTimer = setTimeout(() => void sharedRefresh(), Math.min(delay, 2_147_000_000));
+  }
 };
 export const getAccessToken = () => accessToken;
 
@@ -45,6 +65,13 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+function sharedRefresh(): Promise<string | null> {
+  refreshing ??= refreshAccessToken().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -54,10 +81,7 @@ api.interceptors.response.use(
 
     if (status === 401 && !original._retry && !isAuthRoute) {
       original._retry = true;
-      refreshing ??= refreshAccessToken().finally(() => {
-        refreshing = null;
-      });
-      const token = await refreshing;
+      const token = await sharedRefresh();
       if (token) {
         original.headers = { ...original.headers, Authorization: `Bearer ${token}` };
         return api(original);
