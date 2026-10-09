@@ -50,7 +50,12 @@ export class ProductRepository implements IProductRepository {
     if (filter.category) query.category = filter.category;
     if (filter.isActive !== undefined) query.isActive = filter.isActive;
     if (filter.isFeatured !== undefined) query.isFeatured = filter.isFeatured;
-    if (filter.search) query.name = { $regex: filter.search, $options: 'i' };
+    if (filter.search) {
+      // Escape regex metacharacters — the term is raw user input from the storefront search box,
+      // so "ring (" or "[" must match literally instead of throwing an invalid-regex error.
+      const term = { $regex: filter.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      query.$or = [{ name: term }, { shortDescription: term }, { material: term }, { sku: term }];
+    }
 
     const skip = (pagination.page - 1) * pagination.limit;
     const sortKey = filter.sort ?? 'newest';

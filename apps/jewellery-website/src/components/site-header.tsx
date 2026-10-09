@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import type { CategoryResponse } from '@lorka/types';
 import { apiGet } from '@/lib/api';
 import { CartIndicator } from '@/components/cart-indicator';
 import { AccountMenu } from '@/components/account-menu';
+import { SearchOverlay } from '@/components/search-overlay';
 
 const COLLECTION_LINKS = [
   { label: 'Featured Jewellery', href: '/#featured' },
@@ -95,13 +96,7 @@ export async function SiteHeader() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-5">
-          <button
-            type="button"
-            aria-label="Search"
-            className="hidden text-foreground transition-colors hover:text-gold sm:inline-flex"
-          >
-            <Search className="h-[18px] w-[18px]" strokeWidth={1.5} />
-          </button>
+          <SearchOverlay categories={categories.map((c) => ({ name: c.name, slug: c.slug }))} />
           <AccountMenu />
           <CartIndicator />
         </div>
