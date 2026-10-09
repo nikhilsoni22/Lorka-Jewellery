@@ -1,7 +1,7 @@
 export enum BannerPlacement {
   Hero = 'hero',
   Promo = 'promo',
-  /** Full-screen GIF/video popup over the whole storefront (festival greetings). */
+  /** GIF/video playing behind the homepage header + hero (festival backgrounds). */
   Festival = 'festival',
 }
 

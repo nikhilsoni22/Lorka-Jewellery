@@ -35,14 +35,21 @@ function HeroImage({ src }: { src?: string }) {
   );
 }
 
-export function HeroBanner({ banner }: { banner: BannerResponse | undefined }) {
+export function HeroBanner({
+  banner,
+  transparent = false,
+}: {
+  banner: BannerResponse | undefined;
+  /** True when a festival video plays behind the hero, so the section must not paint over it. */
+  transparent?: boolean;
+}) {
   const title = banner?.title ?? 'Shine Brighter Every Day';
   const subtitle =
     banner?.subtitle ?? 'Discover handcrafted jewellery that celebrates your unique style and every special moment.';
   const href = banner?.href || '/#categories';
 
   return (
-    <section className="overflow-hidden bg-background">
+    <section className={transparent ? 'overflow-hidden' : 'overflow-hidden bg-background'}>
       <div className="container grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-2 lg:py-28">
         <div className="text-center lg:text-left">
           <p className="text-xs font-medium uppercase tracking-[0.4em] text-gold">Timeless Beauty</p>

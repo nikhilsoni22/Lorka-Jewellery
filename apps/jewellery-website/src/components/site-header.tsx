@@ -68,7 +68,7 @@ export async function SiteHeader() {
   }));
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md">
+    <header className="site-header sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-md transition-colors duration-300">
       <div className="container flex h-20 items-center justify-between gap-4">
         <Link href="/" className="group flex shrink-0 items-center gap-2.5">
           <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 ring-gold/50">

@@ -73,6 +73,22 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+
+  /* Festival background (see festival-backdrop.tsx): while scrolled to the top of the homepage the
+     header goes transparent so the festival video shows through it. */
+  html[data-festival-top] .site-header {
+    background-color: transparent;
+    border-color: transparent;
+    backdrop-filter: none;
+  }
+  .festival-blur {
+    mask-image: linear-gradient(to bottom, transparent 30%, black 65%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 30%, black 65%);
+  }
+  .festival-blur-strong {
+    mask-image: linear-gradient(to bottom, transparent 60%, black 95%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 60%, black 95%);
+  }
   h1,
   h2,
   h3 {

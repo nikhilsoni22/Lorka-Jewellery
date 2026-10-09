@@ -114,7 +114,7 @@ export function BannerFormDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Banner' : 'Add Banner'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Update this banner.' : 'Create a homepage banner or a festival overlay.'}
+            {isEditing ? 'Update this banner.' : 'Create a homepage banner or a festival background.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +138,7 @@ export function BannerFormDialog({
                 ? {
                     fieldName: 'media',
                     accept: 'image/gif,image/webp,image/png,image/jpeg,video/mp4,video/webm',
-                    hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 20MB. Transparent GIFs/WEBM look best.',
+                    hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 20MB. Landscape (16:9) looks best.',
                     noun: 'GIF / video',
                   }
                 : {})}
@@ -159,7 +159,7 @@ export function BannerFormDialog({
               <Select id="ban-placement" {...register('placement')}>
                 <option value="hero">Hero (homepage top)</option>
                 <option value="promo">Promo</option>
-                <option value="festival">Festival overlay (full-screen GIF / video)</option>
+                <option value="festival">Festival background (homepage top GIF / video)</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -170,9 +170,10 @@ export function BannerFormDialog({
 
           {isFestival && (
             <p className="rounded-md border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
-              The festival overlay covers the whole website (header and page) with a blur while your
-              GIF/video plays, once per visitor per session. Set Starts/Ends so it appears only during
-              the festival. If several are live, the one with the lowest sort order is shown.
+              Your GIF/video plays in the background of the homepage top section (behind the header and
+              hero), getting softly blurred towards the bottom and fading into the page. Landscape
+              videos work best. Set Starts/Ends so it appears only during the festival. If several are
+              live, the one with the lowest sort order is shown.
             </p>
           )}
 
