@@ -30,12 +30,16 @@ export function HeroBanner({
     <section
       className={
         transparent
-          ? 'festival-hero relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden'
+          ? 'festival-hero relative overflow-hidden pb-28 sm:pb-44 lg:pb-56'
           : 'relative overflow-hidden bg-background'
       }
     >
       <HeroCursorTriangles />
-      <div className="container relative z-10 w-full py-20 sm:py-28 lg:py-36">
+      <div
+        className={`container relative z-10 w-full py-20 sm:py-28 lg:py-36 ${
+          transparent ? 'flex min-h-[calc(100svh-5rem)] items-center' : ''
+        }`}
+      >
         <div className="text-center lg:max-w-2xl lg:text-left">
           <p className="text-xs font-medium uppercase tracking-[0.4em] text-gold">Timeless Beauty</p>
           <h1 className="mt-5 text-4xl leading-tight text-foreground sm:text-5xl lg:text-6xl">{title}</h1>
