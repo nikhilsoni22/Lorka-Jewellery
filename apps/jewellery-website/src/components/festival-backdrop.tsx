@@ -43,8 +43,14 @@ export function FestivalBackdrop({ src }: { src: string }) {
       <div className="festival-blur absolute inset-0 backdrop-blur-sm" />
       <div className="festival-blur-strong absolute inset-0 backdrop-blur-xl" />
 
-      {/* Melts into the plain page background at the very bottom of the hero. */}
-      <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-b from-transparent via-background/60 to-background" />
+      {/* Long, eased fade into the page colour (many stops, so there is no visible "edge"). */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-3/5"
+        style={{
+          background:
+            'linear-gradient(to bottom, hsl(var(--background) / 0) 0%, hsl(var(--background) / 0.02) 12%, hsl(var(--background) / 0.07) 24%, hsl(var(--background) / 0.16) 36%, hsl(var(--background) / 0.3) 48%, hsl(var(--background) / 0.48) 60%, hsl(var(--background) / 0.68) 72%, hsl(var(--background) / 0.86) 84%, hsl(var(--background) / 0.96) 93%, hsl(var(--background)) 100%)',
+        }}
+      />
     </div>
   );
 }

@@ -99,12 +99,12 @@
     text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
   }
   .festival-blur {
-    mask-image: linear-gradient(to bottom, transparent 45%, black 85%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 45%, black 85%);
+    mask-image: linear-gradient(to bottom, transparent 35%, black 90%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 35%, black 90%);
   }
   .festival-blur-strong {
-    mask-image: linear-gradient(to bottom, transparent 75%, black 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 75%, black 100%);
+    mask-image: linear-gradient(to bottom, transparent 65%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 65%, black 100%);
   }
   h1,
   h2,
