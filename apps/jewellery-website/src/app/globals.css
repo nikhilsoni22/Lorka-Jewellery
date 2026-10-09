@@ -88,9 +88,19 @@
     --background: 0 0% 8%;
     --muted-foreground: 0 0% 94%;
   }
-  html[data-festival-top] .site-header .site-dropdown {
+  /* Panels that live inside the header but have their own light background — put the normal theme
+     back so their text isn't light-on-light / dark-on-dark. */
+  html[data-festival-top] .site-header .site-dropdown,
+  html[data-festival-top] .site-header .search-overlay {
     --foreground: 0 0% 12%;
     --background: 36 43% 97%;
+    --muted-foreground: 25 8% 42%;
+    color: hsl(var(--foreground));
+    text-shadow: none;
+  }
+  html[data-festival-top] .site-header .search-overlay *,
+  html[data-festival-top] .site-header .site-dropdown * {
+    text-shadow: none;
   }
   .festival-hero h1,
   .festival-hero p,

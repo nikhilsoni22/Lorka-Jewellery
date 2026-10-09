@@ -154,7 +154,7 @@ export function SearchOverlay({ categories }: { categories: SearchCategory[] }) 
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="Search products">
+        <div className="search-overlay fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="Search products">
           <div
             className="absolute inset-0 animate-in fade-in bg-foreground/50 backdrop-blur-md duration-300"
             onClick={close}
