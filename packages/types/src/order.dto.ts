@@ -39,10 +39,17 @@ export interface OrderChargeResponse {
   amount: number;
 }
 
+export interface OrderStatusEventResponse {
+  status: OrderStatus;
+  at: string;
+}
+
 export interface OrderResponse {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  /** Every status the order has moved through, oldest first — drives the customer tracking timeline. */
+  statusHistory: OrderStatusEventResponse[];
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   razorpayOrderId?: string;

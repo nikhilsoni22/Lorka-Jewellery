@@ -93,6 +93,25 @@ const config: Config = {
           '0%, 100%': { boxShadow: '0 0 0 0 hsl(var(--gold) / 0.0), 0 0 20px 2px hsl(var(--gold) / 0.15)' },
           '50%': { boxShadow: '0 0 0 0 hsl(var(--gold) / 0.0), 0 0 45px 10px hsl(var(--gold) / 0.35)' },
         },
+        // Order tracking
+        pop: {
+          '0%': { transform: 'scale(0.4)', opacity: '0' },
+          '60%': { transform: 'scale(1.18)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        ripple: {
+          '0%': { transform: 'scale(0.9)', opacity: '0' },
+          '15%': { opacity: '0.6' },
+          '100%': { transform: 'scale(2.4)', opacity: '0' },
+        },
+        'grow-x': {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
+        bob: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-3px)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.6s ease-out',
@@ -102,6 +121,10 @@ const config: Config = {
         twinkle: 'twinkle 2.4s ease-in-out infinite',
         shimmer: 'shimmer 2.5s linear infinite',
         glow: 'glow 3.2s ease-in-out infinite',
+        pop: 'pop 0.55s cubic-bezier(0.34,1.56,0.64,1) both',
+        ripple: 'ripple 1.8s ease-out infinite backwards',
+        'grow-x': 'grow-x 1.1s cubic-bezier(0.16,1,0.3,1) both',
+        bob: 'bob 1.4s ease-in-out infinite',
       },
     },
   },

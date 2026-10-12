@@ -21,6 +21,9 @@ export function createOrderRouter(c: OrderController): Router {
   // Express doesn't swallow these as an `:id` param.
   router.get('/track', orderTrackLimiter, validate(trackOrderQuerySchema, 'query'), asyncHandler(c.track));
   router.get('/mine', authGuard, validate(orderQuerySchema, 'query'), asyncHandler(c.mine));
+  // Owner-scoped lookup, so signed-in customers can poll live tracking without the strict
+  // orderNumber+phone limiter that guards guest lookups against enumeration.
+  router.get('/mine/:orderNumber', authGuard, asyncHandler(c.mineByNumber));
   router.post(
     '/',
     optionalAuth,

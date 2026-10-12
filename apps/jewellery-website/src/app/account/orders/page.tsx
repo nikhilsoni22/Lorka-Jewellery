@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import type { OrderResponse } from '@lorka/types';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { trackOrderHref } from '@/lib/order-tracking';
+import { OrderMiniProgress } from '@/components/order-tracking/order-mini-progress';
 
 type Tab = 'pending' | 'completed' | 'all';
 
@@ -91,35 +93,63 @@ export default function AccountOrdersPage() {
         <p className="mt-10 text-center text-muted-foreground">No orders here yet.</p>
       ) : (
         <div className="mt-6 space-y-4">
-          {filtered.map((order) => (
+          {filtered.map((order, i) => (
             <Link
               key={order.id}
-              href={`/order-confirmation?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`}
-              className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-gold/40"
+              href={trackOrderHref(order)}
+              className="group block rounded-xl border border-border bg-card p-4 transition-all duration-300 animate-fade-in-up hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-md sm:p-5"
+              style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
             >
-              <div>
-                <p className="font-medium">{order.orderNumber}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {new Date(order.createdAt).toLocaleDateString()} · {order.items.length} item
-                  {order.items.length !== 1 ? 's' : ''}
-                </p>
-                {order.hasBuildItems && (
-                  <p className="mt-1 text-xs text-gold">
-                    {order.estimatedReadyDate
-                      ? `Build ready by ${new Date(order.estimatedReadyDate).toLocaleDateString()}`
-                      : 'Build timeline pending confirmation'}
-                  </p>
-                )}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex shrink-0 -space-x-3">
+                    {order.items.slice(0, 3).map((item, idx) => (
+                      <div
+                        key={`${item.productId}-${idx}`}
+                        className="h-12 w-12 overflow-hidden rounded-lg border-2 border-card bg-muted"
+                      >
+                        {item.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{order.orderNumber}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleDateString()} · {order.items.length} item
+                      {order.items.length !== 1 ? 's' : ''}
+                    </p>
+                    {order.hasBuildItems && (
+                      <p className="mt-0.5 text-xs text-gold">
+                        {order.estimatedReadyDate
+                          ? `Build ready by ${new Date(order.estimatedReadyDate).toLocaleDateString()}`
+                          : 'Build timeline pending confirmation'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="font-serif">₹{order.total}</span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
+                      STATUS_STYLES[order.status],
+                    )}
+                  >
+                    {order.status}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="font-serif">₹{order.total}</span>
-                <span
-                  className={cn(
-                    'rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
-                    STATUS_STYLES[order.status],
-                  )}
-                >
-                  {order.status}
+
+              <div className="mt-5 flex items-end gap-4">
+                <div className="flex-1">
+                  <OrderMiniProgress order={order} />
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium uppercase tracking-wide text-gold">
+                  Track
+                  <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </div>
             </Link>

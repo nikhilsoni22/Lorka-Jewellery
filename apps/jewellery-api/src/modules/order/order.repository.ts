@@ -15,6 +15,7 @@ function toEntity(doc: OrderDocument): OrderEntity {
     orderNumber: doc.orderNumber,
     userId: doc.userId ? doc.userId.toString() : null,
     status: doc.status as OrderStatus,
+    statusHistory: (doc.statusHistory ?? []).map((e) => ({ status: e.status as OrderStatus, at: e.at })),
     paymentMethod: doc.paymentMethod as PaymentMethod,
     paymentStatus: doc.paymentStatus as PaymentStatus,
     razorpayOrderId: doc.razorpayOrderId || undefined,
@@ -84,6 +85,11 @@ export class OrderRepository implements IOrderRepository {
     return doc ? toEntity(doc) : null;
   }
 
+  async findByOrderNumberForUser(orderNumber: string, userId: string): Promise<OrderEntity | null> {
+    const doc = await OrderModel.findOne({ orderNumber, userId }).lean<OrderDocument>().exec();
+    return doc ? toEntity(doc) : null;
+  }
+
   async existsByOrderNumber(orderNumber: string): Promise<boolean> {
     return (await OrderModel.countDocuments({ orderNumber }).exec()) > 0;
   }
@@ -94,7 +100,11 @@ export class OrderRepository implements IOrderRepository {
   }
 
   async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity | null> {
-    const doc = await OrderModel.findByIdAndUpdate(id, { status }, { new: true })
+    const doc = await OrderModel.findByIdAndUpdate(
+      id,
+      { $set: { status }, $push: { statusHistory: { status, at: new Date() } } },
+      { new: true },
+    )
       .lean<OrderDocument>()
       .exec();
     return doc ? toEntity(doc) : null;

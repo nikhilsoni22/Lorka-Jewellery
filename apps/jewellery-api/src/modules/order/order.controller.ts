@@ -38,6 +38,11 @@ export class OrderController {
     });
   };
 
+  mineByNumber = async (req: Request, res: Response): Promise<void> => {
+    const order = await this.orders.getMine(req.user!.id, req.params.orderNumber as string);
+    sendSuccess(res, order);
+  };
+
   track = async (req: Request, res: Response): Promise<void> => {
     const { orderNumber, phone } = req.query as unknown as TrackOrderQuery;
     const order = await this.orders.track(orderNumber, phone);

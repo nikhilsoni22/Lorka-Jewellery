@@ -15,11 +15,27 @@ import { computeCharges, sumCharges, computeProductPrice, computeDiscountedPrice
 import { verifyRazorpaySignature } from '../payment/razorpay.client';
 import { logger } from '../../common/logger/logger';
 
+/**
+ * Orders placed before status history was recorded have an empty (or partial) history, so
+ * backfill the "placed" event from `createdAt` and the current status from `updatedAt`.
+ */
+function buildStatusHistory(order: OrderEntity): OrderResponse['statusHistory'] {
+  const history = order.statusHistory.map((e) => ({ status: e.status, at: e.at.toISOString() }));
+  if (history[0]?.status !== OrderStatus.Pending) {
+    history.unshift({ status: OrderStatus.Pending, at: order.createdAt.toISOString() });
+  }
+  if (history[history.length - 1]!.status !== order.status) {
+    history.push({ status: order.status, at: order.updatedAt.toISOString() });
+  }
+  return history;
+}
+
 export function toOrderResponse(order: OrderEntity): OrderResponse {
   return {
     id: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
+    statusHistory: buildStatusHistory(order),
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     razorpayOrderId: order.razorpayOrderId,
@@ -130,6 +146,7 @@ export class OrderService {
         orderNumber,
         userId: userId ?? null,
         status: OrderStatus.Pending,
+        statusHistory: [{ status: OrderStatus.Pending, at: new Date() }],
         paymentMethod,
         paymentStatus: paymentMethod === PaymentMethod.Razorpay ? PaymentStatus.Paid : PaymentStatus.Pending,
         razorpayOrderId: input.razorpayOrderId,
@@ -183,9 +200,17 @@ export class OrderService {
     return toOrderResponse(order);
   }
 
+  async getMine(userId: string, orderNumber: string): Promise<OrderResponse> {
+    const order = await this.orders.findByOrderNumberForUser(orderNumber, userId);
+    if (!order) throw AppError.notFound('Order not found');
+    return toOrderResponse(order);
+  }
+
   async updateStatus(id: string, input: UpdateOrderStatusInput): Promise<OrderResponse> {
     const previous = await this.orders.findById(id);
     if (!previous) throw AppError.notFound('Order not found');
+    // Re-saving the same status would add a duplicate tracking event and re-email the customer.
+    if (previous.status === input.status) return toOrderResponse(previous);
 
     if (input.status === OrderStatus.Cancelled && previous.status !== OrderStatus.Cancelled) {
       await Promise.all(

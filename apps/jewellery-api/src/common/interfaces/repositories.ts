@@ -159,6 +159,7 @@ export interface IOrderRepository {
   list(filter: OrderFilter, pagination: Pagination): Promise<PagedResult<OrderEntity>>;
   findById(id: string): Promise<OrderEntity | null>;
   findByOrderNumberAndPhone(orderNumber: string, phone: string): Promise<OrderEntity | null>;
+  findByOrderNumberForUser(orderNumber: string, userId: string): Promise<OrderEntity | null>;
   existsByOrderNumber(orderNumber: string): Promise<boolean>;
   create(data: CreateOrderData): Promise<OrderEntity>;
   updateStatus(id: string, status: OrderStatus): Promise<OrderEntity | null>;

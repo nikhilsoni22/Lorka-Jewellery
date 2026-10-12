@@ -106,11 +106,17 @@ export interface OrderChargeEntity {
   amount: number;
 }
 
+export interface OrderStatusEventEntity {
+  status: OrderStatus;
+  at: Date;
+}
+
 export interface OrderEntity {
   id: string;
   orderNumber: string;
   userId?: string | null;
   status: OrderStatus;
+  statusHistory: OrderStatusEventEntity[];
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   razorpayOrderId?: string;

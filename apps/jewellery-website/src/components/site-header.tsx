@@ -15,6 +15,7 @@ const COLLECTION_LINKS = [
 const PAGE_LINKS = [
   { label: 'My Account', href: '/account/login' },
   { label: 'My Orders', href: '/account/orders' },
+  { label: 'Track Order', href: '/track-order' },
   { label: 'Cart', href: '/cart' },
   { label: 'Checkout', href: '/checkout' },
 ];

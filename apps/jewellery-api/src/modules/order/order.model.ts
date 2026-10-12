@@ -43,6 +43,14 @@ const shippingAddressSchema = new Schema(
   { _id: false },
 );
 
+const statusEventSchema = new Schema(
+  {
+    status: { type: String, enum: Object.values(OrderStatus), required: true },
+    at: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 const orderSchema = new Schema(
   {
     orderNumber: { type: String, required: true, unique: true, index: true },
@@ -53,6 +61,7 @@ const orderSchema = new Schema(
       default: OrderStatus.Pending,
       index: true,
     },
+    statusHistory: { type: [statusEventSchema], default: [] },
     paymentMethod: {
       type: String,
       enum: Object.values(PaymentMethod),

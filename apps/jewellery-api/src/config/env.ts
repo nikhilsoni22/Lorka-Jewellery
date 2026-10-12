@@ -38,6 +38,11 @@ const envSchema = z.object({
   // proper first-party cookie shared across all three, immune to third-party cookie blocking.
   COOKIE_DOMAIN: z.string().optional().transform((v) => (v ? v : undefined)),
 
+  // Shared secret the website's server sends on its server-side fetches (same value as the
+  // website's INTERNAL_API_KEY). Those requests come from the host's few shared IPs on behalf of
+  // every visitor, so they skip the per-IP global rate limiter. Unset = no exemption.
+  INTERNAL_API_KEY: z.string().trim().min(24, 'INTERNAL_API_KEY must be at least 24 chars').optional(),
+
   SEED_ADMIN_NAME: z.string().default('Super Admin'),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
