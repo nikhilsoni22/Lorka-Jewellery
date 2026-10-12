@@ -1,15 +1,10 @@
 import type { SettingsResponse } from '@lorka/types';
 import { apiGet } from '@/lib/api';
+import { FALLBACK_SETTINGS } from '@/lib/store';
 
 export default async function MaintenancePage() {
   const settings = await apiGet<SettingsResponse>('/settings', 0).catch(
-    (): SettingsResponse => ({
-      silverRatePerKg: 0,
-      goldRatePer10g: 0,
-      charges: [],
-      maintenance: { enabled: true, message: '' },
-      paymentMethods: { onlineEnabled: true, codEnabled: true },
-    }),
+    (): SettingsResponse => ({ ...FALLBACK_SETTINGS, maintenance: { enabled: true, message: '' } }),
   );
   const { message, endAt } = settings.maintenance;
 

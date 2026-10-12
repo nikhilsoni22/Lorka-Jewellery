@@ -81,12 +81,25 @@ const orderSchema = new Schema(
     shippingAddress: { type: shippingAddressSchema, required: true },
     items: { type: [orderItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },
+    couponCode: { type: String, default: '' },
+    discount: { type: Number, default: 0, min: 0 },
     charges: { type: [orderChargeSchema], default: [] },
     total: { type: Number, required: true, min: 0 },
     notes: { type: String, default: '' },
+    giftWrap: { type: Boolean, default: false },
+    giftMessage: { type: String, default: '' },
+    refundedAmount: { type: Number, default: 0, min: 0 },
+    refundedAt: { type: Date, default: null },
     estimatedReadyDate: { type: Date, default: null },
   },
   { timestamps: true },
+);
+
+// One order per Razorpay order: the checkout page and the payment webhook can both try to create
+// it, and whichever loses the race must get the existing order back instead of a duplicate.
+orderSchema.index(
+  { razorpayOrderId: 1 },
+  { unique: true, partialFilterExpression: { razorpayOrderId: { $type: 'string', $gt: '' } } },
 );
 
 export type OrderDocument = InferSchemaType<typeof orderSchema> & {

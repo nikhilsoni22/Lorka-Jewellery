@@ -8,6 +8,7 @@ import { pinoHttp } from 'pino-http';
 import { env } from './config/env';
 import { logger } from './common/logger/logger';
 import { globalLimiter } from './common/middleware/rate-limit';
+import { siteRevalidate } from './common/middleware/site-revalidate';
 import { notFound } from './common/middleware/not-found';
 import { errorHandler } from './common/middleware/error-handler';
 import { createApiRouter } from './routes';
@@ -33,12 +34,22 @@ export function createApp(container: AppContainer = buildContainer()): Express {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: '1mb' }));
+  app.use(
+    express.json({
+      limit: '1mb',
+      // Webhook signatures are computed over the exact bytes Razorpay sent, which re-serialising
+      // the parsed JSON wouldn't reproduce — so keep the raw body for that one route.
+      verify: (req, _res, buf) => {
+        if (req.url?.includes('/payments/razorpay/webhook')) (req as express.Request).rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(mongoSanitize());
   app.use(pinoHttp({ logger, autoLogging: env.NODE_ENV !== 'test' }));
   app.use(globalLimiter);
+  app.use(siteRevalidate);
 
   // Legacy: serves any pre-Cloudinary images still referenced from local disk. New uploads go
   // straight to Cloudinary (see modules/upload) so they survive restarts/redeploys.

@@ -6,4 +6,6 @@ export * from './orders';
 export * from './customers';
 export * from './tickets';
 export * from './settings';
+export * from './coupons';
+export * from './reviews';
 export { extractMessage } from '../api-utils';

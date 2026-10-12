@@ -4,10 +4,11 @@ import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } fr
 import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { toast } from 'sonner';
-import { Crosshair, Loader2 } from 'lucide-react';
+import { Crosshair, Gift, Loader2, Lock, ShieldCheck, Tag, Truck, X } from 'lucide-react';
 import {
   ALLOWED_ORDER_CITIES,
   ChargeType,
+  type CouponValidationResponse,
   type OrderResponse,
   type RazorpayOrderResponse,
   type SettingsResponse,
@@ -17,6 +18,7 @@ import { useCart, type CartItem } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { FALLBACK_SETTINGS } from '@/lib/store-defaults';
 
 const inputClass =
   'w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -240,15 +242,7 @@ function CheckoutForm() {
     apiClient
       .get<SettingsResponse>('/settings')
       .then(setSettings)
-      .catch(() =>
-        setSettings({
-          silverRatePerKg: 0,
-          goldRatePer10g: 0,
-          charges: [],
-          maintenance: { enabled: false, message: '' },
-          paymentMethods: { onlineEnabled: true, codEnabled: true },
-        }),
-      );
+      .catch(() => setSettings(FALLBACK_SETTINGS));
   }, []);
 
   // Keep the selection on a method the admin hasn't disabled.
@@ -274,17 +268,48 @@ function CheckoutForm() {
   }, [user]);
 
   const items = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cart.items;
-  const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+  const subtotal = Math.round(items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0) * 100) / 100;
   const hasBuildItems = items.some((i) => i.isBuildOrder);
 
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<CouponValidationResponse | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [giftWrap, setGiftWrap] = useState(false);
+  const [giftMessage, setGiftMessage] = useState('');
+
+  const applyCoupon = async (code: string, silent = false) => {
+    if (!code.trim()) return;
+    setApplyingCoupon(true);
+    try {
+      const result = await apiClient.post<CouponValidationResponse>('/coupons/validate', { code: code.trim(), subtotal });
+      setCoupon(result);
+      if (!silent) toast.success(`Coupon applied — you save ₹${result.discount}`);
+    } catch (err) {
+      setCoupon(null);
+      toast.error(err instanceof Error ? err.message : 'This coupon could not be applied');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  // The discount depends on the subtotal, so re-check the coupon whenever the cart changes.
+  const appliedCode = coupon?.code;
+  useEffect(() => {
+    if (appliedCode) void applyCoupon(appliedCode, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
+
+  const discount = coupon?.discount ?? 0;
+  // Same maths as the API: charges apply to the subtotal after the coupon discount.
+  const chargeBase = subtotal - discount;
   const charges = (settings?.charges ?? [])
     .filter((c) => c.isActive)
     .map((c) => ({
       name: c.name,
       amount:
-        Math.round((c.type === ChargeType.Percentage ? (subtotal * c.value) / 100 : c.value) * 100) / 100,
+        Math.round((c.type === ChargeType.Percentage ? (chargeBase * c.value) / 100 : c.value) * 100) / 100,
     }));
-  const total = subtotal + charges.reduce((sum, c) => sum + c.amount, 0);
+  const total = Math.round((chargeBase + charges.reduce((sum, c) => sum + c.amount, 0)) * 100) / 100;
 
   const updateField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -300,6 +325,27 @@ function CheckoutForm() {
       isBuildOrder: i.isBuildOrder ?? false,
     }));
 
+  /** Everything the customer entered — sent both when starting a payment and when placing the order. */
+  const checkoutDetails = () => ({
+    customerName: form.customerName,
+    customerPhone: form.customerPhone,
+    customerEmail: form.customerEmail || undefined,
+    shippingAddress: {
+      line1: form.line1,
+      line2: form.line2 || undefined,
+      city: form.city,
+      state: form.state,
+      postalCode: form.postalCode,
+      country: form.country,
+      location,
+    },
+    items: orderItemsPayload(),
+    notes: form.notes || undefined,
+    couponCode: coupon?.code,
+    giftWrap,
+    giftMessage: giftWrap ? giftMessage : '',
+  });
+
   const placeOrder = async (paymentFields: {
     paymentMethod: PaymentMethod;
     razorpayOrderId?: string;
@@ -307,20 +353,7 @@ function CheckoutForm() {
     razorpaySignature?: string;
   }) => {
     const order = await apiClient.post<OrderResponse>('/orders', {
-      customerName: form.customerName,
-      customerPhone: form.customerPhone,
-      customerEmail: form.customerEmail || undefined,
-      shippingAddress: {
-        line1: form.line1,
-        line2: form.line2 || undefined,
-        city: form.city,
-        state: form.state,
-        postalCode: form.postalCode,
-        country: form.country,
-        location,
-      },
-      items: orderItemsPayload(),
-      notes: form.notes || undefined,
+      ...checkoutDetails(),
       ...paymentFields,
     });
 
@@ -340,9 +373,9 @@ function CheckoutForm() {
       throw new Error('Payment gateway is still loading. Please try again in a moment.');
     }
 
-    const rpOrder = await apiClient.post<RazorpayOrderResponse>('/payments/razorpay/order', {
-      items: orderItemsPayload(),
-    });
+    // Full details, not just items: if the customer closes the tab right after paying, the API's
+    // payment webhook uses them to create the order anyway.
+    const rpOrder = await apiClient.post<RazorpayOrderResponse>('/payments/razorpay/order', checkoutDetails());
 
     await new Promise<void>((resolve, reject) => {
       const razorpay = new window.Razorpay!({
@@ -546,6 +579,43 @@ function CheckoutForm() {
             />
           </div>
 
+          <div
+            className={cn(
+              'rounded-lg border p-4 transition-colors',
+              giftWrap ? 'border-gold bg-secondary/40' : 'border-border',
+            )}
+          >
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-1 accent-gold"
+                checked={giftWrap}
+                onChange={(e) => setGiftWrap(e.target.checked)}
+              />
+              <span>
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Gift className="h-4 w-4 text-gold" /> This is a gift — wrap it beautifully
+                </span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Free gift wrapping, and we&apos;ll add your handwritten-style note.
+                </span>
+              </span>
+            </label>
+            {giftWrap && (
+              <div className="mt-3 animate-fade-in">
+                <textarea
+                  rows={2}
+                  maxLength={250}
+                  value={giftMessage}
+                  onChange={(e) => setGiftMessage(e.target.value)}
+                  placeholder="Your gift message (optional)"
+                  className={inputClass}
+                />
+                <p className="mt-1 text-right text-xs text-muted-foreground">{giftMessage.length}/250</p>
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="text-sm font-medium">Payment Method</label>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -621,6 +691,55 @@ function CheckoutForm() {
             <span>Subtotal</span>
             <span>₹{subtotal}</span>
           </div>
+
+          {coupon ? (
+            <div className="flex items-center justify-between rounded-md border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 animate-scale-in">
+              <span className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                <span>
+                  <span className="font-semibold">{coupon.code}</span> applied
+                  {coupon.description && <span className="block text-xs">{coupon.description}</span>}
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                −₹{coupon.discount}
+                <button
+                  type="button"
+                  aria-label="Remove coupon"
+                  onClick={() => {
+                    setCoupon(null);
+                    setCouponInput('');
+                  }}
+                  className="rounded-full p-0.5 hover:bg-emerald-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void applyCoupon(couponInput);
+              }}
+              className="flex gap-2"
+            >
+              <input
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                placeholder="Coupon code"
+                className={cn(inputClass, 'uppercase placeholder:normal-case')}
+              />
+              <button
+                type="submit"
+                disabled={applyingCoupon || !couponInput.trim()}
+                className="shrink-0 rounded-md border border-foreground px-4 text-sm font-medium transition-colors hover:bg-foreground hover:text-background disabled:opacity-50"
+              >
+                {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+              </button>
+            </form>
+          )}
+
           {charges.map((charge) => (
             <div key={charge.name} className="flex justify-between text-sm text-muted-foreground">
               <span>{charge.name}</span>
@@ -631,12 +750,26 @@ function CheckoutForm() {
             <span>Total</span>
             <span>₹{total}</span>
           </div>
+          {discount > 0 && (
+            <p className="text-right text-xs font-medium text-emerald-700">You save ₹{discount} on this order</p>
+          )}
           {hasBuildItems && (
             <p className="border-t border-border pt-3 text-xs text-muted-foreground">
               This order includes made-to-order item(s). Our team will confirm your build timeline after
               placing the order.
             </p>
           )}
+          <ul className="space-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
+            <li className="flex items-center gap-2">
+              <Lock className="h-3.5 w-3.5 text-gold" /> Payments secured by Razorpay — we never see your card details
+            </li>
+            <li className="flex items-center gap-2">
+              <ShieldCheck className="h-3.5 w-3.5 text-gold" /> UPI, cards, netbanking &amp; cash on delivery
+            </li>
+            <li className="flex items-center gap-2">
+              <Truck className="h-3.5 w-3.5 text-gold" /> Live tracking from order to delivery
+            </li>
+          </ul>
         </div>
       </div>
     </main>

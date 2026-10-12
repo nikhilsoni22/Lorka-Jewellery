@@ -1,11 +1,12 @@
-import type { OrderStatus, PaymentMethod, PaymentStatus } from '@lorka/types';
+import { OrderStatus, PaymentStatus, type PaymentMethod } from '@lorka/types';
 import type { OrderEntity } from '../../common/interfaces/entities';
-import type {
-  IOrderRepository,
-  OrderFilter,
-  CreateOrderData,
-  PagedResult,
-  Pagination,
+import {
+  DuplicateRazorpayOrderError,
+  type IOrderRepository,
+  type OrderFilter,
+  type CreateOrderData,
+  type PagedResult,
+  type Pagination,
 } from '../../common/interfaces/repositories';
 import { OrderModel, type OrderDocument } from './order.model';
 
@@ -42,9 +43,15 @@ function toEntity(doc: OrderDocument): OrderEntity {
       isBuildOrder: item.isBuildOrder ?? false,
     })),
     subtotal: doc.subtotal,
+    couponCode: doc.couponCode || undefined,
+    discount: doc.discount ?? 0,
     charges: (doc.charges ?? []).map((c) => ({ name: c.name, amount: c.amount })),
     total: doc.total,
     notes: doc.notes || undefined,
+    giftWrap: doc.giftWrap ?? false,
+    giftMessage: doc.giftMessage || undefined,
+    refundedAmount: doc.refundedAmount ?? 0,
+    refundedAt: doc.refundedAt ?? null,
     estimatedReadyDate: doc.estimatedReadyDate ?? null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -94,9 +101,45 @@ export class OrderRepository implements IOrderRepository {
     return (await OrderModel.countDocuments({ orderNumber }).exec()) > 0;
   }
 
+  async findByRazorpayOrderId(razorpayOrderId: string): Promise<OrderEntity | null> {
+    const doc = await OrderModel.findOne({ razorpayOrderId }).lean<OrderDocument>().exec();
+    return doc ? toEntity(doc) : null;
+  }
+
   async create(data: CreateOrderData): Promise<OrderEntity> {
-    const doc = await OrderModel.create(data);
-    return toEntity(doc.toObject() as OrderDocument);
+    try {
+      const doc = await OrderModel.create(data);
+      return toEntity(doc.toObject() as OrderDocument);
+    } catch (err) {
+      const mongoErr = err as { code?: number; keyPattern?: Record<string, unknown> };
+      if (mongoErr.code === 11000 && mongoErr.keyPattern?.razorpayOrderId && data.razorpayOrderId) {
+        throw new DuplicateRazorpayOrderError(data.razorpayOrderId);
+      }
+      throw err;
+    }
+  }
+
+  async recordRefund(id: string, amount: number, fullyRefunded: boolean): Promise<OrderEntity | null> {
+    const doc = await OrderModel.findByIdAndUpdate(
+      id,
+      {
+        $inc: { refundedAmount: amount },
+        $set: { refundedAt: new Date(), ...(fullyRefunded ? { paymentStatus: PaymentStatus.Refunded } : {}) },
+      },
+      { new: true },
+    )
+      .lean<OrderDocument>()
+      .exec();
+    return doc ? toEntity(doc) : null;
+  }
+
+  async hasDeliveredProduct(userId: string, productId: string): Promise<boolean> {
+    const count = await OrderModel.countDocuments({
+      userId,
+      status: OrderStatus.Delivered,
+      'items.productId': productId,
+    }).exec();
+    return count > 0;
   }
 
   async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity | null> {

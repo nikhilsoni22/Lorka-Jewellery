@@ -29,6 +29,25 @@ export interface ProductResponse {
   stock: number;
   isFeatured: boolean;
   isActive: boolean;
+  /** Shown to customers so they can see exactly how the price is made up. */
+  priceBreakup: ProductPriceBreakup;
+  /** Average of visible reviews (0 when there are none). */
+  ratingAvg: number;
+  ratingCount: number;
+  /** Units sold across all orders — drives the "Bestseller" badge and "Popular" sort. */
+  soldCount: number;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ProductPriceBreakup {
+  /** Rate the metal value was computed from, per gram. */
+  metalRatePerGram: number;
+  metalValue: number;
+  makingCharge: number;
+  /** Rupees off from the active offer (0 when there's no offer). */
+  offerDiscount: number;
+}
+
+/** Units sold at or above which a product is badged "Bestseller". */
+export const BESTSELLER_MIN_SOLD = 10;

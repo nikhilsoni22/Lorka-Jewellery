@@ -17,5 +17,9 @@ export function createPaymentRouter(c: PaymentController): Router {
     asyncHandler(c.createRazorpayOrder),
   );
 
+  // Called by Razorpay's servers, authenticated by the X-Razorpay-Signature header (see
+  // PaymentService.handleWebhook). Set this URL in Razorpay Dashboard → Webhooks.
+  router.post('/razorpay/webhook', asyncHandler(c.razorpayWebhook));
+
   return router;
 }

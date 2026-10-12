@@ -34,6 +34,14 @@ import { TicketController } from '../modules/ticket/ticket.controller';
 import { SettingsRepository } from '../modules/settings/settings.repository';
 import { SettingsService } from '../modules/settings/settings.service';
 import { SettingsController } from '../modules/settings/settings.controller';
+import { CouponRepository } from '../modules/coupon/coupon.repository';
+import { CouponService } from '../modules/coupon/coupon.service';
+import { CouponController } from '../modules/coupon/coupon.controller';
+import { ReviewRepository } from '../modules/review/review.repository';
+import { ReviewService } from '../modules/review/review.service';
+import { ReviewController } from '../modules/review/review.controller';
+import { CheckoutPricer } from '../modules/order/checkout-pricer';
+import { PendingCheckoutRepository } from '../modules/payment/pending-checkout.repository';
 
 /**
  * Composition root. Constructor injection wires concrete implementations to the
@@ -54,6 +62,8 @@ export interface AppContainer {
   userController: UserController;
   ticketController: TicketController;
   settingsController: SettingsController;
+  couponController: CouponController;
+  reviewController: ReviewController;
 }
 
 export function buildContainer(): AppContainer {
@@ -67,6 +77,9 @@ export function buildContainer(): AppContainer {
   const orderRepository = new OrderRepository();
   const ticketRepository = new TicketRepository();
   const settingsRepository = new SettingsRepository();
+  const couponRepository = new CouponRepository();
+  const reviewRepository = new ReviewRepository();
+  const pendingCheckoutRepository = new PendingCheckoutRepository();
 
   // Infrastructure services
   // Brevo, then Resend (HTTPS APIs) take priority — SMTP ports are commonly blocked outbound on hosts like
@@ -104,14 +117,25 @@ export function buildContainer(): AppContainer {
   const categoryService = new CategoryService(categoryRepository);
   const productService = new ProductService(productRepository, categoryRepository, settingsRepository);
   const bannerService = new BannerService(bannerRepository);
+  const couponService = new CouponService(couponRepository);
+  const checkoutPricer = new CheckoutPricer(productRepository, settingsRepository, couponService);
   const orderService = new OrderService(
     orderRepository,
     productRepository,
     userRepository,
     emailService,
     settingsRepository,
+    checkoutPricer,
+    couponService,
   );
-  const paymentService = new PaymentService(productRepository, settingsRepository);
+  const paymentService = new PaymentService(
+    settingsRepository,
+    checkoutPricer,
+    pendingCheckoutRepository,
+    orderService,
+    emailService,
+  );
+  const reviewService = new ReviewService(reviewRepository, productRepository, orderRepository, userRepository);
   const ticketService = new TicketService(
     ticketRepository,
     userRepository,
@@ -132,8 +156,12 @@ export function buildContainer(): AppContainer {
   const userController = new UserController(userService);
   const ticketController = new TicketController(ticketService);
   const settingsController = new SettingsController(settingsService);
+  const couponController = new CouponController(couponService);
+  const reviewController = new ReviewController(reviewService);
 
   return {
+    couponController,
+    reviewController,
     authController,
     authService,
     userService,

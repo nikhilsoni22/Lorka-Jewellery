@@ -14,7 +14,8 @@ export const getAccessToken = () => accessToken;
 
 async function rawRequest<T>(path: string, init?: RequestInit): Promise<{ status: number; json: ApiResponse<T> }> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    // FormData sets its own multipart Content-Type (with the boundary) — don't override it.
+    ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(init?.headers as Record<string, string> | undefined),
   };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
@@ -41,6 +42,7 @@ export const apiClient = {
   get: <T>(path: string) => request<T>(path, { method: 'GET' }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 };
 
 /** Attempts to restore a session from the refresh cookie on app load. */

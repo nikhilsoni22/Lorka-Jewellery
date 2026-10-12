@@ -8,6 +8,8 @@ import {
   BadgeCheck,
   CircleX,
   CreditCard,
+  FileText,
+  Gift,
   Hammer,
   LifeBuoy,
   MapPin,
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { OrderResponse } from '@lorka/types';
 import { useOrderLookup } from '@/lib/use-order-lookup';
+import { optimizedImage } from '@/lib/image';
 import { cn } from '@/lib/utils';
 import { STATUS_COPY, formatDateTime, formatDay, getTrackingState } from '@/lib/order-tracking';
 import { OrderStepper } from './order-stepper';
@@ -306,7 +309,7 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
                     {item.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                      <img src={optimizedImage(item.image, 160)} alt={item.name} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground">
                         <ShoppingBag className="h-5 w-5" />
@@ -349,6 +352,12 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
                 <dt>Subtotal</dt>
                 <dd>{inr(order.subtotal)}</dd>
               </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <dt>Coupon {order.couponCode}</dt>
+                  <dd>−{inr(order.discount)}</dd>
+                </div>
+              )}
               {order.charges.map((charge) => (
                 <div key={charge.name} className="flex justify-between text-muted-foreground">
                   <dt>{charge.name}</dt>
@@ -366,7 +375,29 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
               </span>
               <PaymentPill order={order} />
             </div>
+            {order.refundedAmount > 0 && (
+              <p className="mt-3 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                {inr(order.refundedAmount)} refunded to your original payment method
+                {order.refundedAt ? ` on ${formatDay(order.refundedAt)}` : ''}. Banks usually take 5–7 working days to
+                show it.
+              </p>
+            )}
+            <Link
+              href={`/invoice?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`}
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.15em] text-gold underline-offset-4 hover:underline"
+            >
+              <FileText className="h-3.5 w-3.5" /> Download invoice
+            </Link>
           </Card>
+
+          {order.giftWrap && (
+            <Card title="Gift" icon={Gift} delay={320}>
+              <p className="text-sm">This order will be gift wrapped.</p>
+              {order.giftMessage && (
+                <p className="mt-2 rounded-lg bg-secondary/60 px-3 py-2 font-serif text-sm italic">“{order.giftMessage}”</p>
+              )}
+            </Card>
+          )}
 
           <section
             className="rounded-2xl border border-gold/30 bg-gradient-to-br from-secondary/80 to-card p-6 animate-fade-in-up"
@@ -437,6 +468,9 @@ function Chip({ tone, children }: { tone: 'gold' | 'olive' | 'muted'; children: 
 function PaymentPill({ order }: { order: OrderResponse }) {
   if (order.paymentStatus === 'paid') {
     return <span className="rounded-full bg-olive/15 px-2.5 py-0.5 font-medium text-olive">Paid</span>;
+  }
+  if (order.paymentStatus === 'refunded') {
+    return <span className="rounded-full bg-sky-100 px-2.5 py-0.5 font-medium text-sky-800">Refunded</span>;
   }
   if (order.paymentStatus === 'failed') {
     return <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 font-medium text-destructive">Failed</span>;

@@ -19,6 +19,9 @@ const productSchema = new Schema(
     stock: { type: Number, default: 0, min: 0 },
     isFeatured: { type: Boolean, default: false, index: true },
     isActive: { type: Boolean, default: true, index: true },
+    ratingAvg: { type: Number, default: 0, min: 0, max: 5 },
+    ratingCount: { type: Number, default: 0, min: 0 },
+    soldCount: { type: Number, default: 0, min: 0, index: true },
   },
   { timestamps: true },
 );

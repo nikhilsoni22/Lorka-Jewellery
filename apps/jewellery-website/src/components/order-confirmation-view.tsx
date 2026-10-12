@@ -74,6 +74,12 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
           <span>Subtotal</span>
           <span>₹{order.subtotal}</span>
         </div>
+        {order.discount > 0 && (
+          <div className="flex justify-between text-sm text-emerald-700">
+            <span>Coupon {order.couponCode}</span>
+            <span>−₹{order.discount}</span>
+          </div>
+        )}
         {order.charges.map((charge) => (
           <div key={charge.name} className="flex justify-between text-sm text-muted-foreground">
             <span>{charge.name}</span>
@@ -90,6 +96,11 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
             ? `Paid online${order.razorpayPaymentId ? ` (${order.razorpayPaymentId})` : ''}`
             : 'Cash on Delivery'}
         </p>
+        {order.giftWrap && (
+          <p className="text-sm text-muted-foreground">
+            🎁 Gift wrapped{order.giftMessage ? ` — “${order.giftMessage}”` : ''}
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
           Shipping to: {order.shippingAddress.line1}, {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
           {order.shippingAddress.postalCode}

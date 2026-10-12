@@ -27,7 +27,8 @@ const envSchema = z.object({
     .string()
     .default('http://localhost:3000,http://localhost:3001')
     .transform(csv),
-  WEBSITE_URL: z.string().url().default('http://localhost:3000'),
+  // Trailing slashes are stripped so `${WEBSITE_URL}/path` never becomes "//path".
+  WEBSITE_URL: z.string().url().default('http://localhost:3000').transform((v) => v.replace(/\/+$/, '')),
   ADMIN_URL: z.string().url().default('http://localhost:3001'),
   // Leave unset if the API, website, and admin panel are on unrelated domains (e.g. an
   // onrender.com/vercel.app default) — the refresh cookie then only works via direct

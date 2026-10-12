@@ -29,6 +29,23 @@ function toEntity(doc: SettingsDocument): SettingsEntity {
     notificationEmail: doc.notificationEmail || undefined,
     razorpayKeyId: doc.razorpayKeyId || undefined,
     razorpayKeySecret: doc.razorpayKeySecret || undefined,
+    razorpayWebhookSecret: doc.razorpayWebhookSecret || undefined,
+    storeInfo: {
+      phone: doc.storeInfo?.phone ?? '',
+      whatsappNumber: doc.storeInfo?.whatsappNumber ?? '',
+      email: doc.storeInfo?.email ?? '',
+      address: doc.storeInfo?.address ?? '',
+      instagramUrl: doc.storeInfo?.instagramUrl ?? '',
+      facebookUrl: doc.storeInfo?.facebookUrl ?? '',
+      youtubeUrl: doc.storeInfo?.youtubeUrl ?? '',
+      gstin: doc.storeInfo?.gstin ?? '',
+    },
+    policies: {
+      privacy: doc.policies?.privacy ?? '',
+      terms: doc.policies?.terms ?? '',
+      refund: doc.policies?.refund ?? '',
+      shipping: doc.policies?.shipping ?? '',
+    },
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -80,6 +97,9 @@ export class SettingsRepository implements ISettingsRepository {
     doc.set('notificationEmail', data.notificationEmail ?? '');
     doc.set('razorpayKeyId', data.razorpayKeyId ?? '');
     doc.set('razorpayKeySecret', data.razorpayKeySecret ?? '');
+    doc.set('razorpayWebhookSecret', data.razorpayWebhookSecret ?? '');
+    if (data.storeInfo) doc.set('storeInfo', data.storeInfo);
+    if (data.policies) doc.set('policies', data.policies);
 
     await doc.save();
     return toEntity(doc.toObject() as SettingsDocument);

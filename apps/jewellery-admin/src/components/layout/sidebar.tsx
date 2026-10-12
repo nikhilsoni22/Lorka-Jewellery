@@ -12,6 +12,8 @@ import {
   ImageIcon,
   Settings,
   Ticket,
+  BadgePercent,
+  Star,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +27,8 @@ const NAV = [
   { label: 'Orders', href: '/orders', icon: ShoppingBag, enabled: true },
   { label: 'Customers', href: '/customers', icon: Users, enabled: true },
   { label: 'Banners', href: '/banners', icon: ImageIcon, enabled: true },
+  { label: 'Coupons', href: '/coupons', icon: BadgePercent, enabled: true },
+  { label: 'Reviews', href: '/reviews', icon: Star, enabled: true },
   { label: 'Tickets', href: '/tickets', icon: Ticket, enabled: true },
   { label: 'Settings', href: '/settings', icon: Settings, enabled: true },
 ];

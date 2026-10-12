@@ -1,5 +1,17 @@
-import type { UserRole, OrderStatus, TicketStatus, ChargeType } from '@lorka/types';
 import type {
+  UserRole,
+  OrderStatus,
+  TicketStatus,
+  ChargeType,
+  MetalType,
+  ProductSort,
+  StoreInfoResponse,
+  PoliciesResponse,
+} from '@lorka/types';
+import type {
+  CouponEntity,
+  ReviewEntity,
+  PendingCheckoutEntity,
   UserEntity,
   RefreshTokenEntity,
   AuditLogEntity,
@@ -102,7 +114,12 @@ export interface ProductFilter {
   isActive?: boolean;
   isFeatured?: boolean;
   search?: string;
-  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc';
+  sort?: ProductSort;
+  /** Bounds on the live (pre-offer) price. */
+  minPrice?: number;
+  maxPrice?: number;
+  metalType?: MetalType;
+  inStock?: boolean;
 }
 
 /** Current admin-set metal rates, needed to sort/derive products by their live price. */
@@ -123,6 +140,8 @@ export interface IProductRepository {
   /** Atomically decrements stock only if enough is available; returns false if not. */
   decrementStock(id: string, quantity: number): Promise<boolean>;
   incrementStock(id: string, quantity: number): Promise<void>;
+  incrementSold(id: string, quantity: number): Promise<void>;
+  setRating(id: string, ratingAvg: number, ratingCount: number): Promise<void>;
 }
 
 // --- Banner ---------------------------------------------------------------------
@@ -160,10 +179,71 @@ export interface IOrderRepository {
   findById(id: string): Promise<OrderEntity | null>;
   findByOrderNumberAndPhone(orderNumber: string, phone: string): Promise<OrderEntity | null>;
   findByOrderNumberForUser(orderNumber: string, userId: string): Promise<OrderEntity | null>;
+  findByRazorpayOrderId(razorpayOrderId: string): Promise<OrderEntity | null>;
   existsByOrderNumber(orderNumber: string): Promise<boolean>;
   create(data: CreateOrderData): Promise<OrderEntity>;
   updateStatus(id: string, status: OrderStatus): Promise<OrderEntity | null>;
   setBuildEta(id: string, estimatedReadyDate: Date): Promise<OrderEntity | null>;
+  /** Adds `amount` to the refunded total; `fullyRefunded` flips paymentStatus to refunded. */
+  recordRefund(id: string, amount: number, fullyRefunded: boolean): Promise<OrderEntity | null>;
+  /** Whether the user has a delivered order containing this product (verified-buyer reviews). */
+  hasDeliveredProduct(userId: string, productId: string): Promise<boolean>;
+}
+
+/** Thrown by `IOrderRepository.create` when an order already exists for that Razorpay order. */
+export class DuplicateRazorpayOrderError extends Error {
+  constructor(readonly razorpayOrderId: string) {
+    super(`An order already exists for Razorpay order ${razorpayOrderId}`);
+  }
+}
+
+// --- Pending checkout -----------------------------------------------------------
+
+export type CreatePendingCheckoutData = Omit<PendingCheckoutEntity, 'id' | 'createdAt'>;
+
+export interface IPendingCheckoutRepository {
+  create(data: CreatePendingCheckoutData): Promise<PendingCheckoutEntity>;
+  findByRazorpayOrderId(razorpayOrderId: string): Promise<PendingCheckoutEntity | null>;
+}
+
+// --- Coupon ---------------------------------------------------------------------
+
+export type CreateCouponData = Omit<CouponEntity, 'id' | 'usedCount' | 'createdAt' | 'updatedAt'>;
+export type UpdateCouponData = Partial<CreateCouponData>;
+
+export interface ICouponRepository {
+  list(pagination: Pagination): Promise<PagedResult<CouponEntity>>;
+  findById(id: string): Promise<CouponEntity | null>;
+  findByCode(code: string): Promise<CouponEntity | null>;
+  create(data: CreateCouponData): Promise<CouponEntity>;
+  update(id: string, data: UpdateCouponData): Promise<CouponEntity | null>;
+  delete(id: string): Promise<boolean>;
+  /** Atomically counts one use, only while under the usage limit; returns false if exhausted. */
+  redeem(code: string): Promise<boolean>;
+  /** Counts a use regardless of the limit — for already-paid orders, which must go through. */
+  forceRedeem(code: string): Promise<void>;
+  release(code: string): Promise<void>;
+}
+
+// --- Review ---------------------------------------------------------------------
+
+export type CreateReviewData = Omit<ReviewEntity, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface ReviewFilter {
+  productId?: string;
+  isVisible?: boolean;
+  search?: string;
+}
+
+export interface IReviewRepository {
+  list(filter: ReviewFilter, pagination: Pagination): Promise<PagedResult<ReviewEntity>>;
+  findById(id: string): Promise<ReviewEntity | null>;
+  findByUserAndProduct(userId: string, productId: string): Promise<ReviewEntity | null>;
+  create(data: CreateReviewData): Promise<ReviewEntity>;
+  setVisible(id: string, isVisible: boolean): Promise<ReviewEntity | null>;
+  delete(id: string): Promise<ReviewEntity | null>;
+  /** Visible-review rating counts for a product, index 0 = 1 star … index 4 = 5 stars. */
+  ratingDistribution(productId: string): Promise<[number, number, number, number, number]>;
 }
 
 // --- Ticket -------------------------------------------------------------------
@@ -204,6 +284,10 @@ export interface UpdateSettingsData {
   notificationEmail?: string;
   razorpayKeyId?: string;
   razorpayKeySecret?: string;
+  razorpayWebhookSecret?: string;
+  /** Undefined = leave the saved value unchanged. */
+  storeInfo?: StoreInfoResponse;
+  policies?: PoliciesResponse;
 }
 
 export interface ISettingsRepository {

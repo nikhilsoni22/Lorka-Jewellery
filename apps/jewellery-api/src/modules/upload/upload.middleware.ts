@@ -82,6 +82,27 @@ export function productImagesUpload(req: Request, res: Response, next: NextFunct
   });
 }
 
+const reviewUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 3 },
+  fileFilter: imageFileFilter,
+});
+
+/** Customer review photos: up to 3 images under the `images` field. */
+export function reviewImagesUpload(req: Request, res: Response, next: NextFunction): void {
+  reviewUpload.array('images', 3)(req, res, (err: unknown) => {
+    if (!err) {
+      next();
+      return;
+    }
+    if (err instanceof multer.MulterError) {
+      next(AppError.badRequest(err.message));
+      return;
+    }
+    next(err);
+  });
+}
+
 /** Accepts a single image under the `image` field; converts multer's own errors into AppError. */
 export function singleImageUpload(req: Request, res: Response, next: NextFunction): void {
   bannerUpload.single('image')(req, res, (err: unknown) => {

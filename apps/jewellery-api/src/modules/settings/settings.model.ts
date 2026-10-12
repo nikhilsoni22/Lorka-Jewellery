@@ -29,6 +29,30 @@ const paymentMethodsSchema = new Schema(
   { _id: false },
 );
 
+const storeInfoSchema = new Schema(
+  {
+    phone: { type: String, default: '' },
+    whatsappNumber: { type: String, default: '' },
+    email: { type: String, default: '' },
+    address: { type: String, default: '' },
+    instagramUrl: { type: String, default: '' },
+    facebookUrl: { type: String, default: '' },
+    youtubeUrl: { type: String, default: '' },
+    gstin: { type: String, default: '' },
+  },
+  { _id: false },
+);
+
+const policiesSchema = new Schema(
+  {
+    privacy: { type: String, default: '' },
+    terms: { type: String, default: '' },
+    refund: { type: String, default: '' },
+    shipping: { type: String, default: '' },
+  },
+  { _id: false },
+);
+
 const settingsSchema = new Schema(
   {
     silverRatePerKg: { type: Number, default: 0, min: 0 },
@@ -39,6 +63,9 @@ const settingsSchema = new Schema(
     notificationEmail: { type: String, default: '' },
     razorpayKeyId: { type: String, default: '' },
     razorpayKeySecret: { type: String, default: '' },
+    razorpayWebhookSecret: { type: String, default: '' },
+    storeInfo: { type: storeInfoSchema, default: () => ({}) },
+    policies: { type: policiesSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

@@ -130,6 +130,18 @@ export class FakeProductRepository implements IProductRepository {
     if (!existing) return;
     this.byId.set(id, { ...existing, stock: existing.stock + quantity });
   }
+
+  async incrementSold(id: string, quantity: number): Promise<void> {
+    const existing = this.byId.get(id);
+    if (!existing) return;
+    this.byId.set(id, { ...existing, soldCount: (existing.soldCount ?? 0) + quantity });
+  }
+
+  async setRating(id: string, ratingAvg: number, ratingCount: number): Promise<void> {
+    const existing = this.byId.get(id);
+    if (!existing) return;
+    this.byId.set(id, { ...existing, ratingAvg, ratingCount });
+  }
 }
 
 export class FakeBannerRepository implements IBannerRepository {

@@ -5,6 +5,9 @@ import { SiteHeader } from '@/components/site-header';
 import { CartProvider } from '@/lib/cart-context';
 import { AuthProvider } from '@/lib/auth-context';
 import { NavigationProgress } from '@/components/navigation-progress';
+import { WishlistProvider } from '@/lib/wishlist-context';
+import { SiteFooter } from '@/components/site-footer';
+import { WhatsAppFloat } from '@/components/whatsapp-float';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 const TITLE = 'Lorka Jewellers — Fine Silver Jewellery';
@@ -39,8 +42,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <NavigationProgress />
         <AuthProvider>
           <CartProvider>
-            <SiteHeader />
-            {children}
+            <WishlistProvider>
+              <SiteHeader />
+              {children}
+              <SiteFooter />
+              <WhatsAppFloat />
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
         <Toaster position="top-center" />

@@ -46,6 +46,24 @@ export const orderCreateLimiter = rateLimit({
   message: { success: false, message: 'Too many orders placed, please try again later.', code: 'RATE_LIMITED' },
 });
 
+/** Public coupon check — rate-limited so codes can't be guessed by brute force. */
+export const couponCheckLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts, please try again later.', code: 'RATE_LIMITED' },
+});
+
+/** Customer review posts and review-photo uploads. */
+export const reviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts, please try again later.', code: 'RATE_LIMITED' },
+});
+
 /** Public order-tracking lookup — rate-limited to blunt phone-number guessing. */
 export const orderTrackLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

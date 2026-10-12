@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import type { ApiResponse, ProductResponse, CategoryResponse } from '@lorka/types';
+import { POLICY_PAGES } from '@/lib/policies';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 const API_URL = process.env.API_URL ?? 'http://localhost:5000/api/v1';
@@ -22,6 +23,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     { url: SITE_URL, changeFrequency: 'daily', priority: 1 },
+    { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.4 },
+    ...POLICY_PAGES.map((p) => ({
+      url: `${SITE_URL}/policies/${p.slug}`,
+      changeFrequency: 'yearly' as const,
+      priority: 0.2,
+    })),
     ...categories.map((c) => ({
       url: `${SITE_URL}/categories/${c.slug}`,
       lastModified: c.updatedAt,

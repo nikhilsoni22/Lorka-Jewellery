@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ChargeType } from '@lorka/types';
+import { ChargeType, type PoliciesResponse, type StoreInfoResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,28 @@ interface ChargeRow {
   value: string;
   isActive: boolean;
 }
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
+const WEBHOOK_URL = `${API_URL}/payments/razorpay/webhook`;
+const WEBSITE_URL = (process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
+
+const EMPTY_STORE_INFO: StoreInfoResponse = {
+  phone: '',
+  whatsappNumber: '',
+  email: '',
+  address: '',
+  instagramUrl: '',
+  facebookUrl: '',
+  youtubeUrl: '',
+  gstin: '',
+};
+const EMPTY_POLICIES: PoliciesResponse = { privacy: '', terms: '', refund: '', shipping: '' };
+const POLICY_FIELDS: { key: keyof PoliciesResponse; label: string; path: string }[] = [
+  { key: 'privacy', label: 'Privacy Policy', path: '/policies/privacy' },
+  { key: 'terms', label: 'Terms & Conditions', path: '/policies/terms' },
+  { key: 'refund', label: 'Refund & Cancellation', path: '/policies/refund' },
+  { key: 'shipping', label: 'Shipping & Delivery', path: '/policies/shipping' },
+];
 
 function toDatetimeLocal(iso?: string): string {
   if (!iso) return '';
@@ -41,6 +63,11 @@ export default function SettingsPage() {
   const [notificationEmail, setNotificationEmail] = useState('');
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
+  const [razorpayWebhookSecret, setRazorpayWebhookSecret] = useState('');
+  const [storeInfo, setStoreInfo] = useState<StoreInfoResponse>(EMPTY_STORE_INFO);
+  const [policies, setPolicies] = useState<PoliciesResponse>(EMPTY_POLICIES);
+  const updateStore = (key: keyof StoreInfoResponse) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setStoreInfo((s) => ({ ...s, [key]: e.target.value }));
 
   useEffect(() => {
     if (!data) return;
@@ -68,6 +95,9 @@ export default function SettingsPage() {
     setNotificationEmail(data.notificationEmail ?? '');
     setRazorpayKeyId(data.razorpayKeyId ?? '');
     setRazorpayKeySecret(data.razorpayKeySecret ?? '');
+    setRazorpayWebhookSecret(data.razorpayWebhookSecret ?? '');
+    setStoreInfo({ ...EMPTY_STORE_INFO, ...data.storeInfo });
+    setPolicies({ ...EMPTY_POLICIES, ...data.policies });
   }, [data]);
 
   const addCharge = () => {
@@ -104,6 +134,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (storeInfo.whatsappNumber.trim() && !/^\d{10,15}$/.test(storeInfo.whatsappNumber.trim())) {
+      toast.error('WhatsApp number: digits only, with country code — e.g. 919876543210');
+      return;
+    }
+
     if (!paymentMethods.onlineEnabled && !paymentMethods.codEnabled) {
       toast.error('Keep at least one payment method enabled, or customers cannot place orders');
       return;
@@ -130,6 +165,11 @@ export default function SettingsPage() {
         notificationEmail: notificationEmail.trim() || undefined,
         razorpayKeyId: razorpayKeyId.trim() || undefined,
         razorpayKeySecret: razorpayKeySecret.trim() || undefined,
+        razorpayWebhookSecret: razorpayWebhookSecret.trim() || undefined,
+        storeInfo: Object.fromEntries(
+          Object.entries(storeInfo).map(([k, v]) => [k, v.trim()]),
+        ) as unknown as StoreInfoResponse,
+        policies,
       },
       {
         onSuccess: () => toast.success('Settings saved'),
@@ -150,7 +190,9 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl">Settings</h1>
-        <p className="mt-1 text-muted-foreground">Extra charges and site-wide maintenance mode.</p>
+        <p className="mt-1 text-muted-foreground">
+          Metal rates, charges, payments, store details, policies and maintenance mode.
+        </p>
       </div>
 
       <Card>
@@ -372,6 +414,119 @@ export default function SettingsPage() {
               autoComplete="off"
             />
           </div>
+          <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-4 sm:col-span-2">
+            <p className="text-sm font-medium">Webhook (recommended)</p>
+            <p className="text-xs text-muted-foreground">
+              Makes sure every successful payment becomes an order, even if the customer closes the page right
+              after paying. In Razorpay Dashboard → Account &amp; Settings → Webhooks → Add New Webhook: paste
+              this URL, tick the <strong>payment.captured</strong> event, choose a secret, and enter the same
+              secret below.
+            </p>
+            <div className="flex gap-2">
+              <Input readOnly value={WEBHOOK_URL} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  navigator.clipboard
+                    .writeText(WEBHOOK_URL)
+                    .then(() => toast.success('Webhook URL copied'))
+                    .catch(() => toast.error('Copy failed — select and copy it manually'))
+                }
+              >
+                <Copy className="h-4 w-4" /> Copy
+              </Button>
+            </div>
+            <div className="max-w-sm space-y-1 pt-1">
+              <Label>Webhook secret</Label>
+              <Input
+                type="password"
+                value={razorpayWebhookSecret}
+                onChange={(e) => setRazorpayWebhookSecret(e.target.value)}
+                placeholder="Same secret as in Razorpay"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Store Contact Details</CardTitle>
+          <CardDescription>
+            Shown in the website footer, Contact page and invoices. The WhatsApp number also turns on the
+            floating chat button and &ldquo;Ask on WhatsApp&rdquo; on product pages.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Phone</Label>
+            <Input value={storeInfo.phone} onChange={updateStore('phone')} placeholder="+91 98765 43210" />
+          </div>
+          <div className="space-y-1">
+            <Label>WhatsApp number</Label>
+            <Input value={storeInfo.whatsappNumber} onChange={updateStore('whatsappNumber')} placeholder="919876543210" />
+            <p className="text-xs text-muted-foreground">Digits only, starting with country code 91.</p>
+          </div>
+          <div className="space-y-1">
+            <Label>Email</Label>
+            <Input type="email" value={storeInfo.email} onChange={updateStore('email')} placeholder="hello@lorka.in" />
+          </div>
+          <div className="space-y-1">
+            <Label>GSTIN (optional)</Label>
+            <Input value={storeInfo.gstin} onChange={updateStore('gstin')} placeholder="Shown on invoices" />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Address</Label>
+            <Textarea rows={2} value={storeInfo.address} onChange={updateStore('address')} placeholder="Shop address" />
+          </div>
+          <div className="space-y-1">
+            <Label>Instagram link</Label>
+            <Input value={storeInfo.instagramUrl} onChange={updateStore('instagramUrl')} placeholder="https://instagram.com/…" />
+          </div>
+          <div className="space-y-1">
+            <Label>Facebook link</Label>
+            <Input value={storeInfo.facebookUrl} onChange={updateStore('facebookUrl')} placeholder="https://facebook.com/…" />
+          </div>
+          <div className="space-y-1">
+            <Label>YouTube link</Label>
+            <Input value={storeInfo.youtubeUrl} onChange={updateStore('youtubeUrl')} placeholder="https://youtube.com/…" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Policy Pages</CardTitle>
+          <CardDescription>
+            Razorpay needs these pages on your website before activating live payments. Leave a box empty to
+            show the default draft — but please read the drafts on the website and replace them with your
+            actual policies. Formatting: blank line = new paragraph, &ldquo;## &rdquo; = heading, &ldquo;- &rdquo; = bullet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {POLICY_FIELDS.map(({ key, label, path }) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label>{label}</Label>
+                <a
+                  href={`${WEBSITE_URL}${path}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                >
+                  View on website <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <Textarea
+                rows={5}
+                value={policies[key]}
+                onChange={(e) => setPolicies((p) => ({ ...p, [key]: e.target.value }))}
+                placeholder="Empty — the website shows its default draft"
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
 

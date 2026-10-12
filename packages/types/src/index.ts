@@ -23,3 +23,5 @@ export * from './ticket.dto';
 export * from './settings.enums';
 export * from './settings.schemas';
 export * from './settings.dto';
+export * from './coupon';
+export * from './review';

@@ -11,6 +11,8 @@ import { createPaymentRouter } from '../modules/payment/payment.routes';
 import { createUserRouter } from '../modules/users/user.routes';
 import { createTicketRouter } from '../modules/ticket/ticket.routes';
 import { createSettingsRouter } from '../modules/settings/settings.routes';
+import { createCouponRouter } from '../modules/coupon/coupon.routes';
+import { createReviewRouter } from '../modules/review/review.routes';
 import type { AppContainer } from '../container/container';
 
 export function createApiRouter(container: AppContainer): Router {
@@ -35,6 +37,8 @@ export function createApiRouter(container: AppContainer): Router {
   router.use('/users', createUserRouter(container.userController));
   router.use('/tickets', createTicketRouter(container.ticketController));
   router.use('/settings', createSettingsRouter(container.settingsController));
+  router.use('/coupons', createCouponRouter(container.couponController));
+  router.use('/reviews', createReviewRouter(container.reviewController));
 
   return router;
 }

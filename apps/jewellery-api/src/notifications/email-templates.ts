@@ -1,5 +1,5 @@
 import { OrderStatus, type OrderResponse } from '@lorka/types';
-import type { AdminTicketNotification } from '../common/interfaces/services';
+import type { AdminPaymentAlert, AdminTicketNotification } from '../common/interfaces/services';
 
 export interface EmailContent {
   subject: string;
@@ -91,6 +91,14 @@ function renderOrderConfirmationHtml(
           <td style="padding:4px 0;">Subtotal</td>
           <td style="padding:4px 0;text-align:right;">₹${order.subtotal}</td>
         </tr>
+        ${
+          order.discount > 0
+            ? `<tr>
+          <td style="padding:4px 0;color:#2e7d32;">Coupon ${order.couponCode ? escapeHtml(order.couponCode) : ''}</td>
+          <td style="padding:4px 0;text-align:right;color:#2e7d32;">−₹${order.discount}</td>
+        </tr>`
+            : ''
+        }
         ${chargeRows}
         <tr>
           <td style="padding:8px 0;font-weight:bold;border-top:1px solid #eee;">Total</td>
@@ -108,6 +116,14 @@ function renderOrderConfirmationHtml(
         audience === 'admin'
           ? `<p style="margin:12px 0 0;">
         <a href="${mapsNavigationUrl(order)}" style="display:inline-block;background:#1a73e8;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:bold;">📍 Navigate to delivery address</a>
+      </p>`
+          : ''
+      }
+
+      ${
+        order.giftWrap
+          ? `<p style="margin-top:16px;padding:10px 14px;background:#f7f4ef;border-left:3px solid #c9a24a;font-size:14px;">
+        🎁 <strong>Gift wrapped</strong>${order.giftMessage ? `<br />Message: “${escapeHtml(order.giftMessage)}”` : ''}
       </p>`
           : ''
       }
@@ -293,6 +309,27 @@ function renderAdminTicketHtml(data: AdminTicketNotification): string {
       </p>
     </div>
   `;
+}
+
+export function adminPaymentAlertEmail(data: AdminPaymentAlert): EmailContent {
+  return {
+    subject: `⚠️ Payment received but order NOT created — ₹${data.amount} | Lorka Jewellers`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+        <h1 style="font-size:22px;color:#b71c1c;">Payment received, but no order was created</h1>
+        <p>A customer paid online, but the order could not be created automatically. Please contact
+        them and either create the order manually or refund the payment from the Razorpay dashboard.</p>
+        <table style="border-collapse:collapse;margin-top:16px;font-size:14px;">
+          <tr><td style="padding:4px 12px 4px 0;color:#666;">Customer</td><td>${escapeHtml(data.customerName)}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#666;">Phone</td><td><a href="tel:${escapeHtml(data.customerPhone)}">${escapeHtml(data.customerPhone)}</a></td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#666;">Amount</td><td><strong>₹${data.amount}</strong></td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#666;">Payment ID</td><td>${escapeHtml(data.razorpayPaymentId)}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#666;">Razorpay order</td><td>${escapeHtml(data.razorpayOrderId)}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Reason</td><td>${escapeHtml(data.reason)}</td></tr>
+        </table>
+      </div>
+    `,
+  };
 }
 
 export function adminTicketNotificationEmail(data: AdminTicketNotification): EmailContent {

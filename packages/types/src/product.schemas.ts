@@ -4,6 +4,9 @@ import { MetalType } from './catalog.enums';
 
 const objectId = z.string().trim().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 
+export const PRODUCT_SORTS = ['newest', 'popular', 'price_asc', 'price_desc', 'name_asc'] as const;
+export type ProductSort = (typeof PRODUCT_SORTS)[number];
+
 /** Optional offer, expressed as a percentage (1-100) of the calculated price.
  * - Omitted key → `undefined`: field wasn't touched, leave any existing offer alone.
  * - Blank field ('') → `null`: the admin explicitly cleared the offer, so it must be written
@@ -65,5 +68,10 @@ export const productQuerySchema = paginationQuerySchema.extend({
   isActive: booleanQueryParam,
   isFeatured: booleanQueryParam,
   search: z.string().trim().optional(),
-  sort: z.enum(['newest', 'price_asc', 'price_desc', 'name_asc']).optional().default('newest'),
+  sort: z.enum(PRODUCT_SORTS).optional().default('newest'),
+  /** Bounds on the live (pre-offer) price, in rupees. */
+  minPrice: z.coerce.number().nonnegative().optional(),
+  maxPrice: z.coerce.number().nonnegative().optional(),
+  metalType: z.nativeEnum(MetalType).optional(),
+  inStock: booleanQueryParam,
 });

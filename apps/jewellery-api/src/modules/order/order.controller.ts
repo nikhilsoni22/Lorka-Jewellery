@@ -59,6 +59,11 @@ export class OrderController {
     sendSuccess(res, order);
   };
 
+  refund = async (req: Request, res: Response): Promise<void> => {
+    const order = await this.orders.refund(req.params.id as string, req.body);
+    sendSuccess(res, order);
+  };
+
   setBuildEta = async (req: Request, res: Response): Promise<void> => {
     const { estimatedReadyDate } = req.body as SetBuildEtaInput;
     const order = await this.orders.setBuildEta(req.params.id as string, estimatedReadyDate);

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/cart-context';
+import { optimizedImage } from '@/lib/image';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, totalPrice } = useCart();
@@ -35,7 +36,7 @@ export default function CartPage() {
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
               {item.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                <img src={optimizedImage(item.image, 200)} alt={item.name} className="h-full w-full object-cover" />
               ) : null}
             </div>
             <div className="flex-1">

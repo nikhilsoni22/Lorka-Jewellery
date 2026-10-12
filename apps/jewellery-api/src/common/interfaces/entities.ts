@@ -6,6 +6,10 @@ import type {
   TicketStatus,
   ChargeType,
   MetalType,
+  CouponType,
+  CheckoutDetailsInput,
+  StoreInfoResponse,
+  PoliciesResponse,
 } from '@lorka/types';
 
 export interface UserEntity {
@@ -77,6 +81,10 @@ export interface ProductEntity {
   stock: number;
   isFeatured: boolean;
   isActive: boolean;
+  /** Denormalised from visible reviews, recomputed whenever a review changes. */
+  ratingAvg?: number;
+  ratingCount?: number;
+  soldCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,12 +135,60 @@ export interface OrderEntity {
   shippingAddress: ShippingAddressEntity;
   items: OrderItemEntity[];
   subtotal: number;
+  couponCode?: string;
+  discount: number;
   charges: OrderChargeEntity[];
   total: number;
   notes?: string;
+  giftWrap: boolean;
+  giftMessage?: string;
+  refundedAmount?: number;
+  refundedAt?: Date | null;
   estimatedReadyDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CouponEntity {
+  id: string;
+  code: string;
+  description: string;
+  type: CouponType;
+  value: number;
+  minOrderAmount: number;
+  maxDiscount: number | null;
+  usageLimit: number | null;
+  usedCount: number;
+  expiresAt: Date | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReviewEntity {
+  id: string;
+  productId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  title: string;
+  comment: string;
+  images: string[];
+  verifiedBuyer: boolean;
+  isVisible: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Checkout details saved when a Razorpay order is created, so a payment webhook can still create
+ * the order if the customer's browser never reports back. */
+export interface PendingCheckoutEntity {
+  id: string;
+  razorpayOrderId: string;
+  userId: string | null;
+  input: CheckoutDetailsInput;
+  amountPaise: number;
+  createdAt: Date;
 }
 
 export interface TicketEntity {
@@ -177,6 +233,9 @@ export interface SettingsEntity {
   notificationEmail?: string;
   razorpayKeyId?: string;
   razorpayKeySecret?: string;
+  razorpayWebhookSecret?: string;
+  storeInfo?: StoreInfoResponse;
+  policies?: PoliciesResponse;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -8,7 +8,7 @@ import type {
 } from '../../common/interfaces/repositories';
 import { AppError } from '../../common/errors/app-error';
 import { generateUniqueSlug } from '../../common/utils/slugify';
-import { computeProductPrice, computeDiscountedPrice } from '../../common/utils/pricing';
+import { computeProductPrice, computeDiscountedPrice, metalRatePerGram } from '../../common/utils/pricing';
 
 export function toProductResponse(
   product: ProductEntity,
@@ -16,6 +16,8 @@ export function toProductResponse(
   categoryName?: string,
 ): ProductResponse {
   const price = computeProductPrice(product.weight, product.makingCharge, product.metalType, rates);
+  const discountPrice = computeDiscountedPrice(price, product.discountPercent);
+  const ratePerGram = metalRatePerGram(product.metalType, rates);
   return {
     id: product.id,
     name: product.name,
@@ -29,7 +31,7 @@ export function toProductResponse(
     makingCharge: product.makingCharge,
     price,
     discountPercent: product.discountPercent ?? undefined,
-    discountPrice: computeDiscountedPrice(price, product.discountPercent),
+    discountPrice,
     images: product.images,
     material: product.material,
     purity: product.purity,
@@ -37,6 +39,15 @@ export function toProductResponse(
     stock: product.stock,
     isFeatured: product.isFeatured,
     isActive: product.isActive,
+    priceBreakup: {
+      metalRatePerGram: Math.round(ratePerGram * 100) / 100,
+      metalValue: Math.round(ratePerGram * product.weight * 100) / 100,
+      makingCharge: product.makingCharge,
+      offerDiscount: discountPrice !== undefined ? Math.round((price - discountPrice) * 100) / 100 : 0,
+    },
+    ratingAvg: product.ratingAvg ?? 0,
+    ratingCount: product.ratingCount ?? 0,
+    soldCount: product.soldCount ?? 0,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -58,6 +69,10 @@ export class ProductService {
         isFeatured: query.isFeatured,
         search: query.search,
         sort: query.sort,
+        minPrice: query.minPrice,
+        maxPrice: query.maxPrice,
+        metalType: query.metalType,
+        inStock: query.inStock,
       },
       { page: query.page, limit: query.limit },
       rates,

@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { trackOrderHref } from '@/lib/order-tracking';
+import { optimizedImage } from '@/lib/image';
 import { OrderMiniProgress } from '@/components/order-tracking/order-mini-progress';
 
 type Tab = 'pending' | 'completed' | 'all';
@@ -110,7 +111,7 @@ export default function AccountOrdersPage() {
                       >
                         {item.image && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                          <img src={optimizedImage(item.image, 120)} alt={item.name} className="h-full w-full object-cover" />
                         )}
                       </div>
                     ))}

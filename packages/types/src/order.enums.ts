@@ -19,6 +19,7 @@ export enum PaymentStatus {
   Pending = 'pending',
   Paid = 'paid',
   Failed = 'failed',
+  Refunded = 'refunded',
 }
 
 export const PAYMENT_STATUSES = Object.values(PaymentStatus);

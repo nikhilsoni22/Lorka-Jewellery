@@ -3,6 +3,7 @@ import {
   createOrderSchema,
   updateOrderStatusSchema,
   setBuildEtaSchema,
+  refundOrderSchema,
   orderQuerySchema,
   trackOrderQuerySchema,
   UserRole,
@@ -37,6 +38,7 @@ export function createOrderRouter(c: OrderController): Router {
   router.get('/:id', ...adminOnly, asyncHandler(c.getById));
   router.patch('/:id/status', ...adminOnly, validate(updateOrderStatusSchema), asyncHandler(c.updateStatus));
   router.patch('/:id/build-eta', ...adminOnly, validate(setBuildEtaSchema), asyncHandler(c.setBuildEta));
+  router.post('/:id/refund', ...adminOnly, validate(refundOrderSchema), asyncHandler(c.refund));
 
   return router;
 }

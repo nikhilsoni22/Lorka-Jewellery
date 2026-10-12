@@ -1,5 +1,5 @@
 import type { OrderResponse } from '@lorka/types';
-import type { AdminTicketNotification, IEmailService } from '../common/interfaces/services';
+import type { AdminPaymentAlert, AdminTicketNotification, IEmailService } from '../common/interfaces/services';
 import { logger } from '../common/logger/logger';
 
 /**
@@ -55,5 +55,9 @@ export class ConsoleEmailService implements IEmailService {
       },
       '[email] Admin ticket notification (dev — not actually sent)',
     );
+  }
+
+  async sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void> {
+    logger.warn({ to, ...data }, '[email] Admin payment alert (dev — not actually sent)');
   }
 }

@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import type { CategoryResponse } from '@lorka/types';
 import { Reveal } from '@/components/reveal';
 import { SectionHeading } from '@/components/section-heading';
+import { optimizedImage } from '@/lib/image';
 
 const FALLBACK_TYPES = [
   {
@@ -110,7 +111,7 @@ export function CategoryGrid({ categories }: { categories: CategoryResponse[] })
             {category.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={category.image}
+                src={optimizedImage(category.image, 800)}
                 alt=""
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />

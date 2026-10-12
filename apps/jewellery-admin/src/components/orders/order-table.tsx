@@ -17,6 +17,7 @@ const PAYMENT_STATUS_VARIANT = {
   pending: 'outline',
   paid: 'success',
   failed: 'destructive',
+  refunded: 'secondary',
 } as const;
 
 export function OrderTable({ orders }: { orders: OrderResponse[] }) {

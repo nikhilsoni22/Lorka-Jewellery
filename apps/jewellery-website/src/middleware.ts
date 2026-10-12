@@ -9,7 +9,12 @@ const API_URL = process.env.API_URL ?? 'http://localhost:5000/api/v1';
  */
 export async function middleware(request: NextRequest) {
   try {
-    const res = await fetch(`${API_URL}/settings`, { cache: 'no-store' });
+    const internalKey = process.env.INTERNAL_API_KEY;
+    // Runs for every page view, so it must identify itself to skip the API's per-IP limit.
+    const res = await fetch(`${API_URL}/settings`, {
+      cache: 'no-store',
+      headers: internalKey ? { 'x-internal-key': internalKey } : undefined,
+    });
     const json = (await res.json()) as ApiResponse<SettingsResponse>;
 
     if (json.success) {
@@ -32,5 +37,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|maintenance).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|images|api/|maintenance).*)'],
 };

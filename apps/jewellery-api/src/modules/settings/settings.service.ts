@@ -1,4 +1,4 @@
-import type { UpdateSettingsInput, SettingsResponse } from '@lorka/types';
+import type { UpdateSettingsInput, SettingsResponse, StoreInfoResponse, PoliciesResponse } from '@lorka/types';
 import type { SettingsEntity } from '../../common/interfaces/entities';
 import type { ISettingsRepository } from '../../common/interfaces/repositories';
 
@@ -29,12 +29,31 @@ export function toSettingsResponse(
       onlineEnabled: settings.paymentMethods.onlineEnabled,
       codEnabled: settings.paymentMethods.codEnabled,
     },
-    notificationEmail: settings.notificationEmail,
+    storeInfo: settings.storeInfo ?? EMPTY_STORE_INFO,
+    policies: settings.policies ?? EMPTY_POLICIES,
     ...(includeRazorpayKeys
-      ? { razorpayKeyId: settings.razorpayKeyId, razorpayKeySecret: settings.razorpayKeySecret }
+      ? {
+          notificationEmail: settings.notificationEmail,
+          razorpayKeyId: settings.razorpayKeyId,
+          razorpayKeySecret: settings.razorpayKeySecret,
+          razorpayWebhookSecret: settings.razorpayWebhookSecret,
+        }
       : {}),
   };
 }
+
+const EMPTY_STORE_INFO: StoreInfoResponse = {
+  phone: '',
+  whatsappNumber: '',
+  email: '',
+  address: '',
+  instagramUrl: '',
+  facebookUrl: '',
+  youtubeUrl: '',
+  gstin: '',
+};
+
+const EMPTY_POLICIES: PoliciesResponse = { privacy: '', terms: '', refund: '', shipping: '' };
 
 export class SettingsService {
   constructor(private readonly settings: ISettingsRepository) {}
@@ -68,6 +87,9 @@ export class SettingsService {
       notificationEmail: input.notificationEmail,
       razorpayKeyId: input.razorpayKeyId,
       razorpayKeySecret: input.razorpayKeySecret,
+      razorpayWebhookSecret: input.razorpayWebhookSecret,
+      storeInfo: input.storeInfo,
+      policies: input.policies,
     });
     // update() is only reachable by an authenticated admin (route is role-gated), so it's safe
     // to always echo the keys back here.

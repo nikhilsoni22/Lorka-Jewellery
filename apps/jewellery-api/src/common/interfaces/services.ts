@@ -9,6 +9,16 @@ export interface AdminTicketNotification {
   latestOrderNumber?: string;
 }
 
+/** A customer was charged online but no order could be created — the admin must follow up. */
+export interface AdminPaymentAlert {
+  razorpayPaymentId: string;
+  razorpayOrderId: string;
+  amount: number;
+  customerName: string;
+  customerPhone: string;
+  reason: string;
+}
+
 export interface IEmailService {
   sendPasswordReset(to: string, resetUrl: string): Promise<void>;
   sendOrderConfirmation(to: string, order: OrderResponse): Promise<void>;
@@ -18,4 +28,5 @@ export interface IEmailService {
   /** `order.status` is the new status — sent whenever admin changes an order's status. */
   sendOrderStatusUpdate(to: string, order: OrderResponse): Promise<void>;
   sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void>;
+  sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void>;
 }

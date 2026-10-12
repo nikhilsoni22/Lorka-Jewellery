@@ -123,6 +123,20 @@
   }
 }
 
+/* Invoice printing: only the invoice itself goes on paper. */
+@media print {
+  .site-header,
+  footer:not(article footer),
+  .no-print,
+  a[aria-label='Chat with us on WhatsApp'],
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

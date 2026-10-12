@@ -49,6 +49,22 @@ export function useUpdateOrderStatus(id: string) {
   });
 }
 
+/** Refunds through Razorpay. Omit `amount` to refund everything not yet refunded. */
+export function useRefundOrder(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (amount?: number): Promise<OrderResponse> => {
+      const { data } = await api.post<ApiResponse<OrderResponse>>(`/orders/${id}/refund`, amount ? { amount } : {});
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+    },
+  });
+}
+
 export function useSetBuildEta(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -24,15 +24,41 @@ export interface PaymentMethodsResponse {
   codEnabled: boolean;
 }
 
+/** Public contact details shown in the website footer, contact page and WhatsApp button. */
+export interface StoreInfoResponse {
+  phone: string;
+  /** Digits with country code, e.g. 919876543210 — used for wa.me links. */
+  whatsappNumber: string;
+  email: string;
+  address: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  youtubeUrl: string;
+  gstin: string;
+}
+
+/** Policy page bodies (plain text, blank lines separate paragraphs). Empty = website default. */
+export interface PoliciesResponse {
+  privacy: string;
+  terms: string;
+  refund: string;
+  shipping: string;
+}
+
 export interface SettingsResponse {
   silverRatePerKg: number;
   goldRatePer10g: number;
   charges: ChargeResponse[];
   maintenance: MaintenanceResponse;
   paymentMethods: PaymentMethodsResponse;
+  storeInfo: StoreInfoResponse;
+  policies: PoliciesResponse;
+  /** Only present when fetched by an authenticated admin — omitted from the public response. */
   notificationEmail?: string;
   /** Only present when fetched by an authenticated admin — omitted from the public response. */
   razorpayKeyId?: string;
   /** Only present when fetched by an authenticated admin — omitted from the public response. */
   razorpayKeySecret?: string;
+  /** Only present when fetched by an authenticated admin — omitted from the public response. */
+  razorpayWebhookSecret?: string;
 }

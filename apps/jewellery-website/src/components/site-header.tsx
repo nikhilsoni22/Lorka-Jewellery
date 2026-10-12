@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react';
 import type { CategoryResponse } from '@lorka/types';
 import { apiGet } from '@/lib/api';
 import { CartIndicator } from '@/components/cart-indicator';
+import { WishlistIndicator } from '@/components/wishlist-indicator';
 import { AccountMenu } from '@/components/account-menu';
 import { SearchOverlay } from '@/components/search-overlay';
 
@@ -16,8 +17,11 @@ const PAGE_LINKS = [
   { label: 'My Account', href: '/account/login' },
   { label: 'My Orders', href: '/account/orders' },
   { label: 'Track Order', href: '/track-order' },
+  { label: 'Wishlist', href: '/wishlist' },
   { label: 'Cart', href: '/cart' },
-  { label: 'Checkout', href: '/checkout' },
+  { label: 'About Us', href: '/about' },
+  { label: 'Shipping & Delivery', href: '/policies/shipping' },
+  { label: 'Refund Policy', href: '/policies/refund' },
 ];
 
 function NavDropdown({
@@ -93,12 +97,15 @@ export async function SiteHeader() {
           <NavDropdown label="Collection" items={COLLECTION_LINKS} />
           <NavDropdown label="Pages" items={PAGE_LINKS} />
           <span className="cursor-default py-2 text-muted-foreground/70">Blog</span>
-          <span className="cursor-default py-2 text-muted-foreground/70">Contact</span>
+          <Link href="/contact" className="py-2 transition-colors hover:text-gold">
+            Contact
+          </Link>
         </nav>
 
         <div className="flex shrink-0 items-center gap-5">
           <SearchOverlay categories={categories.map((c) => ({ name: c.name, slug: c.slug }))} />
           <AccountMenu />
+          <WishlistIndicator />
           <CartIndicator />
         </div>
       </div>

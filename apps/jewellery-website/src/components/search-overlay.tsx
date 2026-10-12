@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2, Search, Sparkles, X } from 'lucide-react';
 import type { ApiResponse, ProductResponse } from '@lorka/types';
 import { cn } from '@/lib/utils';
+import { optimizedImage } from '@/lib/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
 const MAX_SUGGESTIONS = 6;
@@ -280,7 +281,7 @@ export function SearchOverlay({ categories }: { categories: SearchCategory[] }) 
                                 {product.images[0] && (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
-                                    src={product.images[0]}
+                                    src={optimizedImage(product.images[0], 160)}
                                     alt=""
                                     className="h-full w-full object-cover"
                                   />

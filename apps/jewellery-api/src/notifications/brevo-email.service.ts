@@ -1,5 +1,5 @@
 import type { OrderResponse } from '@lorka/types';
-import type { AdminTicketNotification, IEmailService } from '../common/interfaces/services';
+import type { AdminPaymentAlert, AdminTicketNotification, IEmailService } from '../common/interfaces/services';
 import { env } from '../config/env';
 import { logger } from '../common/logger/logger';
 import {
@@ -10,6 +10,7 @@ import {
   adminOrderNotificationEmail,
   orderStatusUpdateEmail,
   adminTicketNotificationEmail,
+  adminPaymentAlertEmail,
 } from './email-templates';
 
 /** Sends email over Brevo's HTTPS API (port 443, never blocked by hosts like Render). Brevo only
@@ -61,6 +62,11 @@ export class BrevoEmailService implements IEmailService {
 
   async sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void> {
     const { subject, html } = adminTicketNotificationEmail(data);
+    await this.send(to, subject, html);
+  }
+
+  async sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void> {
+    const { subject, html } = adminPaymentAlertEmail(data);
     await this.send(to, subject, html);
   }
 

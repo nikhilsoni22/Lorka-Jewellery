@@ -1,4 +1,4 @@
-import { ChargeType, MetalType } from '@lorka/types';
+import { ChargeType, CouponType, MetalType } from '@lorka/types';
 import type { ChargeEntity, OrderChargeEntity } from '../interfaces/entities';
 import type { MetalRates } from '../interfaces/repositories';
 
@@ -13,11 +13,27 @@ export function computeProductPrice(
   metalType: MetalType,
   rates: MetalRates,
 ): number {
-  const metalCost =
-    metalType === MetalType.Gold
-      ? (rates.goldRatePer10g / 10) * weightGrams
-      : (rates.silverRatePerKg / 1000) * weightGrams;
+  const metalCost = metalRatePerGram(metalType, rates) * weightGrams;
   return Math.round((metalCost + makingCharge) * 100) / 100;
+}
+
+export function metalRatePerGram(metalType: MetalType, rates: MetalRates): number {
+  return metalType === MetalType.Gold ? rates.goldRatePer10g / 10 : rates.silverRatePerKg / 1000;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+export interface CouponTerms {
+  type: CouponType;
+  value: number;
+  maxDiscount: number | null;
+}
+
+/** Rupees a coupon takes off `subtotal` — never more than the subtotal itself. */
+export function computeCouponDiscount(subtotal: number, coupon: CouponTerms): number {
+  const raw = coupon.type === CouponType.Percentage ? (subtotal * coupon.value) / 100 : coupon.value;
+  const capped = coupon.maxDiscount !== null ? Math.min(raw, coupon.maxDiscount) : raw;
+  return round2(Math.max(0, Math.min(capped, subtotal)));
 }
 
 /** Applies an optional offer percentage (1-100) to the live price. Returns undefined when

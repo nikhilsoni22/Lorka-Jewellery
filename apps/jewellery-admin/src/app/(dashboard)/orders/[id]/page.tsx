@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, MapPin, MessageCircle } from 'lucide-react';
+import { Gift, Loader2, MapPin, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { OrderStatus } from '@lorka/types';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useOrder, useUpdateOrderStatus, useSetBuildEta } from '@/lib/hooks/orders';
+import { useOrder, useUpdateOrderStatus, useSetBuildEta, useRefundOrder } from '@/lib/hooks/orders';
 import { extractMessage } from '@/lib/api-utils';
 
 const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as OrderStatus[];
@@ -26,6 +26,7 @@ const PAYMENT_STATUS_VARIANT = {
   pending: 'outline',
   paid: 'success',
   failed: 'destructive',
+  refunded: 'secondary',
 } as const;
 
 export default function OrderDetailPage() {
@@ -33,8 +34,10 @@ export default function OrderDetailPage() {
   const { data: order, isLoading } = useOrder(params.id);
   const updateStatus = useUpdateOrderStatus(params.id);
   const setBuildEta = useSetBuildEta(params.id);
+  const refund = useRefundOrder(params.id);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | ''>('');
   const [buildEtaInput, setBuildEtaInput] = useState('');
+  const [refundInput, setRefundInput] = useState('');
 
   if (isLoading) {
     return (
@@ -64,6 +67,26 @@ export default function OrderDetailPage() {
     setBuildEta.mutate(new Date(buildEtaInput).toISOString(), {
       onSuccess: () => toast.success('Build ETA updated'),
       onError: (err) => toast.error(extractMessage(err, 'Unable to update build ETA')),
+    });
+  };
+
+  const refundable = Math.round((order.total - order.refundedAmount) * 100) / 100;
+  const canRefund = order.paymentMethod === 'razorpay' && order.paymentStatus === 'paid' && refundable > 0;
+
+  const handleRefund = () => {
+    const amount = refundInput ? Number(refundInput) : undefined;
+    if (amount !== undefined && (!(amount > 0) || amount > refundable)) {
+      toast.error(`Enter an amount between ₹1 and ₹${refundable}`);
+      return;
+    }
+    const shown = amount ?? refundable;
+    if (!window.confirm(`Refund ₹${shown} to the customer's original payment method? This cannot be undone.`)) return;
+    refund.mutate(amount, {
+      onSuccess: () => {
+        toast.success(`₹${shown} refund started — it reaches the customer in 5–7 working days`);
+        setRefundInput('');
+      },
+      onError: (err) => toast.error(extractMessage(err, 'Unable to refund this payment')),
     });
   };
 
@@ -126,6 +149,12 @@ export default function OrderDetailPage() {
                 <span>Subtotal</span>
                 <span>₹{order.subtotal}</span>
               </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <span>Coupon {order.couponCode}</span>
+                  <span>−₹{order.discount}</span>
+                </div>
+              )}
               {order.charges.map((charge) => (
                 <div key={charge.name} className="flex justify-between text-muted-foreground">
                   <span>{charge.name}</span>
@@ -139,10 +168,29 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
+          {order.giftWrap && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <p className="flex items-center gap-2 text-sm font-medium text-amber-900">
+                <Gift className="h-4 w-4" /> Gift wrap this order
+              </p>
+              {order.giftMessage ? (
+                <p className="mt-2 text-sm italic text-amber-900">Card message: “{order.giftMessage}”</p>
+              ) : (
+                <p className="mt-1 text-sm text-amber-800">No message.</p>
+              )}
+            </div>
+          )}
+
           {order.notes && (
-            <div className="rounded-lg border border-border p-4">
+            <div
+              className={
+                order.notes.includes('[Needs attention]')
+                  ? 'rounded-lg border border-red-300 bg-red-50 p-4'
+                  : 'rounded-lg border border-border p-4'
+              }
+            >
               <p className="text-sm font-medium">Notes</p>
-              <p className="mt-1 text-sm text-muted-foreground">{order.notes}</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{order.notes}</p>
             </div>
           )}
         </div>
@@ -167,6 +215,35 @@ export default function OrderDetailPage() {
               <p className="mt-2 break-all text-xs text-muted-foreground">
                 Payment ID: {order.razorpayPaymentId}
               </p>
+            )}
+            {order.refundedAmount > 0 && (
+              <p className="mt-2 text-sm text-sky-700">
+                ₹{order.refundedAmount} refunded
+                {order.refundedAt ? ` on ${new Date(order.refundedAt).toLocaleDateString()}` : ''}
+              </p>
+            )}
+            {canRefund && (
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-sm font-medium">Refund via Razorpay</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Leave blank for a full refund (₹{refundable}), or enter a partial amount.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={refundable}
+                    step="0.01"
+                    placeholder={`₹${refundable}`}
+                    value={refundInput}
+                    onChange={(e) => setRefundInput(e.target.value)}
+                  />
+                  <Button variant="destructive" onClick={handleRefund} disabled={refund.isPending}>
+                    {refund.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Refund
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
 
