@@ -7,7 +7,7 @@ import type { OrderResponse, SettingsResponse } from '@lorka/types';
 import { apiClient } from '@/lib/api-client';
 import { useOrderLookup } from '@/lib/use-order-lookup';
 import { trackOrderHref } from '@/lib/order-tracking';
-import { EMPTY_STORE_INFO } from '@/lib/store-defaults';
+import { EMPTY_STORE_INFO, normalizeSettings } from '@/lib/store-defaults';
 import { OrderNotFound } from '@/components/order-confirmation-view';
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -22,7 +22,7 @@ export function InvoiceView({ orderNumber, phone }: { orderNumber: string; phone
   useEffect(() => {
     apiClient
       .get<SettingsResponse>('/settings')
-      .then((s) => setStore(s.storeInfo))
+      .then((s) => setStore(normalizeSettings(s).storeInfo))
       .catch(() => undefined);
   }, []);
 
