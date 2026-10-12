@@ -1,6 +1,6 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { OrderResponse } from '@lorka/types';
-import type { IEmailService } from '../common/interfaces/services';
+import type { AdminTicketNotification, IEmailService } from '../common/interfaces/services';
 import { env } from '../config/env';
 import { logger } from '../common/logger/logger';
 import {
@@ -10,6 +10,7 @@ import {
   buildEtaUpdateEmail,
   adminOrderNotificationEmail,
   orderStatusUpdateEmail,
+  adminTicketNotificationEmail,
 } from './email-templates';
 
 /** Raw Gmail/SMTP transport, used when SMTP_USER/SMTP_PASS are configured. Note: most PaaS
@@ -63,6 +64,11 @@ export class SmtpEmailService implements IEmailService {
 
   async sendOrderStatusUpdate(to: string, order: OrderResponse): Promise<void> {
     const { subject, html } = orderStatusUpdateEmail(order);
+    await this.send(to, subject, html);
+  }
+
+  async sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void> {
+    const { subject, html } = adminTicketNotificationEmail(data);
     await this.send(to, subject, html);
   }
 

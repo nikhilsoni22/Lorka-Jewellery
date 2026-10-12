@@ -112,7 +112,13 @@ export function buildContainer(): AppContainer {
     settingsRepository,
   );
   const paymentService = new PaymentService(productRepository, settingsRepository);
-  const ticketService = new TicketService(ticketRepository, userRepository);
+  const ticketService = new TicketService(
+    ticketRepository,
+    userRepository,
+    orderRepository,
+    settingsRepository,
+    emailService,
+  );
   const settingsService = new SettingsService(settingsRepository);
 
   // Controllers

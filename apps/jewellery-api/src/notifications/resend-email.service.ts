@@ -1,5 +1,5 @@
 import type { OrderResponse } from '@lorka/types';
-import type { IEmailService } from '../common/interfaces/services';
+import type { AdminTicketNotification, IEmailService } from '../common/interfaces/services';
 import { env } from '../config/env';
 import { logger } from '../common/logger/logger';
 import {
@@ -9,6 +9,7 @@ import {
   buildEtaUpdateEmail,
   adminOrderNotificationEmail,
   orderStatusUpdateEmail,
+  adminTicketNotificationEmail,
 } from './email-templates';
 
 /** Sends email over Resend's HTTPS API instead of raw SMTP sockets — outbound HTTPS (443) works
@@ -49,6 +50,11 @@ export class ResendEmailService implements IEmailService {
 
   async sendOrderStatusUpdate(to: string, order: OrderResponse): Promise<void> {
     const { subject, html } = orderStatusUpdateEmail(order);
+    await this.send(to, subject, html);
+  }
+
+  async sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void> {
+    const { subject, html } = adminTicketNotificationEmail(data);
     await this.send(to, subject, html);
   }
 

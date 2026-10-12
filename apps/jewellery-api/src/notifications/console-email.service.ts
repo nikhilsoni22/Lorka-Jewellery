@@ -1,5 +1,5 @@
 import type { OrderResponse } from '@lorka/types';
-import type { IEmailService } from '../common/interfaces/services';
+import type { AdminTicketNotification, IEmailService } from '../common/interfaces/services';
 import { logger } from '../common/logger/logger';
 
 /**
@@ -41,6 +41,19 @@ export class ConsoleEmailService implements IEmailService {
     logger.info(
       { to, orderNumber: order.orderNumber, status: order.status },
       '[email] Order status update (dev — not actually sent)',
+    );
+  }
+
+  async sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void> {
+    logger.info(
+      {
+        to,
+        subject: data.ticket.subject,
+        customer: data.ticket.customerName,
+        phone: data.customerPhone,
+        latestOrderNumber: data.latestOrderNumber,
+      },
+      '[email] Admin ticket notification (dev — not actually sent)',
     );
   }
 }

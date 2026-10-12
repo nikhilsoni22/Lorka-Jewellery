@@ -1,4 +1,5 @@
 import { OrderStatus, type OrderResponse } from '@lorka/types';
+import type { AdminTicketNotification } from '../common/interfaces/services';
 
 export interface EmailContent {
   subject: string;
@@ -234,6 +235,70 @@ export function adminOrderNotificationEmail(order: OrderResponse): EmailContent 
   return {
     subject: `New order received — ${order.orderNumber} | Lorka Jewellers`,
     html: renderOrderConfirmationHtml(order, 'admin'),
+  };
+}
+
+/** Ticket subject/message are free text typed by the customer — never inject them as raw HTML. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderAdminTicketHtml(data: AdminTicketNotification): string {
+  const { ticket, customerPhone, shippingAddress, latestOrderNumber } = data;
+  const name = escapeHtml(ticket.customerName);
+  const email = escapeHtml(ticket.customerEmail);
+  const phone = customerPhone ? escapeHtml(customerPhone) : '';
+  const notOnFile = '<span style="color:#999;">Not on file (no orders yet)</span>';
+  const address = shippingAddress
+    ? `${escapeHtml(shippingAddress.line1)}${shippingAddress.line2 ? `, ${escapeHtml(shippingAddress.line2)}` : ''}<br />
+       ${escapeHtml(shippingAddress.city)}, ${escapeHtml(shippingAddress.state)} ${escapeHtml(shippingAddress.postalCode)}<br />
+       ${escapeHtml(shippingAddress.country)}`
+    : notOnFile;
+  const replySubject = encodeURIComponent(`Re: ${ticket.subject}`);
+  const row = (label: string, value: string) => `
+        <tr>
+          <td style="padding:6px 12px 6px 0;color:#666;font-size:13px;vertical-align:top;white-space:nowrap;">${label}</td>
+          <td style="padding:6px 0;font-size:14px;">${value}</td>
+        </tr>`;
+
+  return `
+    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+      <h1 style="font-size:22px;">New support ticket 🎫</h1>
+      <p style="color:#666;font-size:13px;">Raised on ${formatDateTime(ticket.createdAt)}</p>
+
+      <h2 style="font-size:16px;margin-top:24px;">${escapeHtml(ticket.subject)}</h2>
+      <div style="background:#f7f4ef;border-left:3px solid #c9a24a;padding:12px 16px;font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(ticket.message)}</div>
+
+      <h2 style="font-size:16px;margin-top:24px;">Customer details</h2>
+      <table style="border-collapse:collapse;">
+        ${row('Name', `<strong>${name}</strong>`)}
+        ${row('Email', `<a href="mailto:${email}?subject=${replySubject}">${email}</a>`)}
+        ${row('Phone', phone ? `<a href="tel:${phone}">${phone}</a>` : notOnFile)}
+        ${row('Address', address)}
+        ${latestOrderNumber ? row('Latest order', escapeHtml(latestOrderNumber)) : ''}
+      </table>
+      ${
+        phone || shippingAddress
+          ? '<p style="color:#999;font-size:12px;margin-top:8px;">Phone and address are from the customer\'s most recent order.</p>'
+          : ''
+      }
+
+      <p style="margin:24px 0 0;">
+        <a href="mailto:${email}?subject=${replySubject}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:bold;">Reply to ${name}</a>
+      </p>
+    </div>
+  `;
+}
+
+export function adminTicketNotificationEmail(data: AdminTicketNotification): EmailContent {
+  return {
+    subject: `New support ticket — ${data.ticket.subject} | Lorka Jewellers`,
+    html: renderAdminTicketHtml(data),
   };
 }
 

@@ -377,10 +377,10 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Order Notifications</CardTitle>
+          <CardTitle className="text-xl">Order &amp; Ticket Notifications</CardTitle>
           <CardDescription>
-            Get an email at this address every time a customer places a new order, with the order name/ID
-            and full bill.
+            Get an email at this address every time a customer places a new order (with the order name/ID
+            and full bill) or raises a support ticket (with their message, name, phone and address).
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -11,7 +11,7 @@ import type {
   Pagination,
 } from '../../src/common/interfaces/repositories';
 import type { OrderResponse } from '@lorka/types';
-import type { IEmailService } from '../../src/common/interfaces/services';
+import type { AdminTicketNotification, IEmailService } from '../../src/common/interfaces/services';
 
 export class FakeUserRepository implements IUserRepository {
   private readonly byId = new Map<string, UserEntity>();
@@ -169,6 +169,7 @@ export class FakeEmailService implements IEmailService {
   readonly buildEtaUpdates: { to: string; order: OrderResponse }[] = [];
   readonly adminNotifications: { to: string; order: OrderResponse }[] = [];
   readonly statusUpdates: { to: string; order: OrderResponse }[] = [];
+  readonly ticketNotifications: { to: string; data: AdminTicketNotification }[] = [];
 
   async sendPasswordReset(to: string, resetUrl: string): Promise<void> {
     this.sent.push({ to, resetUrl });
@@ -192,5 +193,9 @@ export class FakeEmailService implements IEmailService {
 
   async sendOrderStatusUpdate(to: string, order: OrderResponse): Promise<void> {
     this.statusUpdates.push({ to, order });
+  }
+
+  async sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void> {
+    this.ticketNotifications.push({ to, data });
   }
 }
