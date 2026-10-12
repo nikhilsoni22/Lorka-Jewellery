@@ -458,7 +458,9 @@ function CheckoutForm() {
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`}
           strategy="afterInteractive"
-          onLoad={() => setMapsLoaded(true)}
+          // onReady, not onLoad: onLoad fires only the first time the script loads, so coming back
+          // to checkout in the same tab left address suggestions and "current location" dead.
+          onReady={() => setMapsLoaded(true)}
         />
       )}
       <h1 className="text-3xl">Checkout</h1>

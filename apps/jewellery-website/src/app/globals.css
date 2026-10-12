@@ -123,6 +123,11 @@
   }
 }
 
+/* Google's address-suggestion dropdown is appended to <body>; keep it above the sticky header. */
+.pac-container {
+  z-index: 10000 !important;
+}
+
 /* Invoice printing: only the invoice itself goes on paper. */
 @media print {
   .site-header,
