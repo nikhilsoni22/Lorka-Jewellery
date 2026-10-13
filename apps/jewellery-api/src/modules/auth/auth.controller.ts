@@ -70,11 +70,19 @@ export class AuthController {
     sendSuccess(res, { sent: true }, 200, 'A new code has been sent to your email');
   };
 
-  // --- Deferred providers (wired when credentials are provided) -------------
-
-  googleStub = async (): Promise<void> => {
-    throw AppError.notImplemented('Google login is not enabled yet');
+  google = async (req: Request, res: Response): Promise<void> => {
+    const outcome = await this.auth.googleLogin(req.body, this.ctx(req));
+    if (outcome.kind === 'needs_name') {
+      const { email, suggestedName } = outcome;
+      sendSuccess(res, { status: 'needs_name', email, suggestedName });
+      return;
+    }
+    const { issued, isNewUser } = outcome;
+    this.setRefreshCookie(res, issued.refresh.token, issued.refresh.expiresAt);
+    sendSuccess(res, { status: 'authenticated', isNewUser, ...issued.result }, isNewUser ? 201 : 200);
   };
+
+  // --- Deferred providers (wired when credentials are provided) -------------
 
   otpRequestStub = async (): Promise<void> => {
     throw AppError.notImplemented('OTP login is not enabled yet');

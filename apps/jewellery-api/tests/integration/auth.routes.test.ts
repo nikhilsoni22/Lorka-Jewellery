@@ -115,8 +115,8 @@ describe('refresh + me flow', () => {
 });
 
 describe('deferred providers', () => {
-  it('returns 501 for google login', async () => {
-    const res = await request(app).post(`${base}/auth/google`).send({});
+  it('returns 501 for google login when Firebase is not configured', async () => {
+    const res = await request(app).post(`${base}/auth/google`).send({ idToken: 'x'.repeat(40) });
     expect(res.status).toBe(501);
   });
 });

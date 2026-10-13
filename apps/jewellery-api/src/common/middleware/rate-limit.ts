@@ -4,6 +4,8 @@ import rateLimit from 'express-rate-limit';
 import { env } from '../../config/env';
 
 export const INTERNAL_KEY_HEADER = 'x-internal-key';
+/** Real visitor IP, set by the website when it relays a browser's request (see its auth proxy). */
+export const CLIENT_IP_HEADER = 'x-client-ip';
 
 /**
  * True for server-side fetches from our own website (its server renders pages for every visitor
@@ -18,11 +20,25 @@ export function isInternalRequest(req: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** IP the website relayed on a visitor's behalf — only trusted alongside a valid internal key. */
+function relayedClientIp(req: Request): string | undefined {
+  const ip = req.get(CLIENT_IP_HEADER)?.trim();
+  return ip && isInternalRequest(req) ? ip : undefined;
+}
+
+/**
+ * Requests the website relays for a visitor (auth calls go through its own domain so the session
+ * cookie is first-party) all arrive from the host's IPs, so limit by the visitor's IP instead.
+ */
+const keyGenerator = (req: Request): string => relayedClientIp(req) ?? req.ip ?? 'unknown';
+
 /** Generous global limiter applied to the whole API. */
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 300,
-  skip: isInternalRequest,
+  // Skip the website's own page-render fetches, but still count requests it relays for a visitor.
+  skip: (req) => isInternalRequest(req) && !req.get(CLIENT_IP_HEADER),
+  keyGenerator,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.', code: 'RATE_LIMITED' },
@@ -32,6 +48,7 @@ export const globalLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
+  keyGenerator,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, message: 'Too many attempts, please try again later.', code: 'RATE_LIMITED' },
@@ -41,6 +58,7 @@ export const authLimiter = rateLimit({
 export const orderCreateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
+  keyGenerator,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, message: 'Too many orders placed, please try again later.', code: 'RATE_LIMITED' },
@@ -50,6 +68,7 @@ export const orderCreateLimiter = rateLimit({
 export const couponCheckLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,
+  keyGenerator,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, message: 'Too many attempts, please try again later.', code: 'RATE_LIMITED' },
@@ -59,6 +78,7 @@ export const couponCheckLimiter = rateLimit({
 export const reviewLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 20,
+  keyGenerator,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, message: 'Too many attempts, please try again later.', code: 'RATE_LIMITED' },
@@ -68,6 +88,7 @@ export const reviewLimiter = rateLimit({
 export const orderTrackLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
+  keyGenerator,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, message: 'Too many attempts, please try again later.', code: 'RATE_LIMITED' },

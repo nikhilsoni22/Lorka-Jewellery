@@ -39,3 +39,12 @@ export const refreshSchema = z.object({
 export const verifyEmailOtpSchema = z.object({
   otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code'),
 });
+
+/**
+ * Google sign-in via Firebase: `idToken` is the Firebase ID token from the popup. `name` is only
+ * sent on the second call for a brand-new account, after the customer confirms what to be called.
+ */
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(20, 'Invalid Google sign-in token'),
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80).optional(),
+});

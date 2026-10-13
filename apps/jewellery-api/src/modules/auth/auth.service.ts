@@ -1,10 +1,11 @@
+import { randomBytes } from 'node:crypto';
 import { UserRole, isAdminRole, type LoginResult } from '@lorka/types';
 import type { UserEntity } from '../../common/interfaces/entities';
 import type {
   IUserRepository,
   IRefreshTokenRepository,
 } from '../../common/interfaces/repositories';
-import type { IEmailService } from '../../common/interfaces/services';
+import type { IEmailService, IGoogleTokenVerifier } from '../../common/interfaces/services';
 import { AppError } from '../../common/errors/app-error';
 import { hashPassword, verifyPassword } from '../../common/security/password';
 import {
@@ -31,12 +32,19 @@ export interface SessionIssue {
   refresh: { token: string; expiresAt: Date };
 }
 
+/** A brand-new Google user must confirm their name before the account is created. */
+export type GoogleLoginOutcome =
+  | { kind: 'session'; issued: SessionIssue; isNewUser: boolean }
+  | { kind: 'needs_name'; email: string; suggestedName: string };
+
 export class AuthService {
   constructor(
     private readonly users: IUserRepository,
     private readonly refreshTokens: IRefreshTokenRepository,
     private readonly email: IEmailService,
     private readonly audit: AuditLogService,
+    /** Null when FIREBASE_PROJECT_ID isn't configured — Google login then responds 501. */
+    private readonly google: IGoogleTokenVerifier | null = null,
   ) {}
 
   async register(
@@ -79,6 +87,52 @@ export class AuthService {
     }
     await this.audit.record('auth.admin.login', this.auditCtx(ctx, user.id));
     return this.issueSession(user, input.rememberMe ?? false, ctx);
+  }
+
+  /**
+   * Signs in with a Firebase Google ID token. Existing accounts (including ones first made with a
+   * password) are matched by email; an unknown email gets `needs_name` back until the client
+   * resends the same token with the name the customer chose. Google sessions are always
+   * long-lived ("remember me") — customers shouldn't be asked to sign in again on every visit.
+   */
+  async googleLogin(
+    input: { idToken: string; name?: string },
+    ctx: RequestContext,
+  ): Promise<GoogleLoginOutcome> {
+    if (!this.google) throw AppError.notImplemented('Google login is not enabled yet');
+    const identity = await this.google.verify(input.idToken);
+
+    const existing = await this.users.findByEmail(identity.email);
+    if (existing) {
+      if (existing.isBlocked) throw AppError.forbidden('Your account has been blocked');
+      // Google has proven they own this inbox, so a pending email OTP is no longer needed.
+      if (!existing.emailVerified) {
+        await this.users.markEmailVerified(existing.id);
+        existing.emailVerified = true;
+      }
+      await this.audit.record('auth.google.login', this.auditCtx(ctx, existing.id));
+      return { kind: 'session', issued: await this.issueSession(existing, true, ctx), isNewUser: false };
+    }
+
+    if (!input.name) {
+      return {
+        kind: 'needs_name',
+        email: identity.email,
+        suggestedName: identity.name?.trim().slice(0, 80) ?? '',
+      };
+    }
+
+    // No password was chosen: store a hash of random bytes nobody knows. "Forgot password" still
+    // works if they later want to sign in with email + password too.
+    const user = await this.users.create({
+      name: input.name,
+      email: identity.email,
+      passwordHash: await hashPassword(randomBytes(32).toString('hex')),
+      role: UserRole.Customer,
+      emailVerified: true,
+    });
+    await this.audit.record('auth.google.register', this.auditCtx(ctx, user.id, { googleUid: identity.uid }));
+    return { kind: 'session', issued: await this.issueSession(user, true, ctx), isNewUser: true };
   }
 
   async refresh(rawToken: string | undefined, ctx: RequestContext): Promise<SessionIssue> {

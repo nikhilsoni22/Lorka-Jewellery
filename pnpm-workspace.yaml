@@ -3,9 +3,11 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  '@firebase/util': false
   '@scarf/scarf': false
   esbuild: true
   mongodb-memory-server: true
+  protobufjs: false
   sharp: true
   unrs-resolver: true
 

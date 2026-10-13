@@ -44,6 +44,11 @@ const envSchema = z.object({
   // every visitor, so they skip the per-IP global rate limiter. Unset = no exemption.
   INTERNAL_API_KEY: z.string().trim().min(24, 'INTERNAL_API_KEY must be at least 24 chars').optional(),
 
+  // Firebase project ID (Firebase console → Project settings → General), e.g. "lorka-jewellers".
+  // Google sign-in ID tokens are verified against Google's public keys for this project — no
+  // service-account file needed. Unset = /auth/google responds 501 (Google login disabled).
+  FIREBASE_PROJECT_ID: z.string().trim().optional().transform((v) => (v ? v : undefined)),
+
   SEED_ADMIN_NAME: z.string().default('Super Admin'),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),

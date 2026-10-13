@@ -141,3 +141,59 @@ describe('AuthService password reset', () => {
     expect(email.sent).toHaveLength(0);
   });
 });
+
+describe('AuthService.googleLogin', () => {
+  const identity = { uid: 'google-uid-1', email: 'jane@gmail.com', name: 'Jane Doe' };
+  let verifier: { verify: () => Promise<typeof identity> };
+  let googleService: AuthService;
+
+  beforeEach(() => {
+    verifier = { verify: async () => identity };
+    googleService = new AuthService(
+      users,
+      refresh,
+      email,
+      new AuditLogService(new FakeAuditLogRepository()),
+      verifier,
+    );
+  });
+
+  it('responds 501 when Google login is not configured', async () => {
+    await expect(service.googleLogin({ idToken: 'token' }, ctx)).rejects.toMatchObject({ statusCode: 501 });
+  });
+
+  it('asks a new customer for their name before creating the account', async () => {
+    const outcome = await googleService.googleLogin({ idToken: 'token' }, ctx);
+    expect(outcome).toEqual({ kind: 'needs_name', email: 'jane@gmail.com', suggestedName: 'Jane Doe' });
+    expect(await users.findByEmail('jane@gmail.com')).toBeNull();
+  });
+
+  it('creates a verified customer once the name is given', async () => {
+    const outcome = await googleService.googleLogin({ idToken: 'token', name: 'Jane' }, ctx);
+    expect(outcome.kind).toBe('session');
+    if (outcome.kind !== 'session') return;
+    expect(outcome.isNewUser).toBe(true);
+    expect(outcome.issued.result.user).toMatchObject({ name: 'Jane', emailVerified: true, role: UserRole.Customer });
+  });
+
+  it('signs an existing password account in and marks its email verified', async () => {
+    await service.register({ name: 'Jane', email: 'jane@gmail.com', password: 'Secret123' }, ctx);
+    const outcome = await googleService.googleLogin({ idToken: 'token' }, ctx);
+    expect(outcome.kind).toBe('session');
+    if (outcome.kind !== 'session') return;
+    expect(outcome.isNewUser).toBe(false);
+    expect(outcome.issued.result.user.emailVerified).toBe(true);
+  });
+
+  it('rejects a blocked account with 403', async () => {
+    const blocked = { ...identity, email: 'blocked@gmail.com' };
+    await users.create({ name: 'B', email: blocked.email, passwordHash: 'x', role: UserRole.Customer });
+    const original = users.findByEmail.bind(users);
+    users.findByEmail = async (e) => {
+      const user = await original(e);
+      return user && { ...user, isBlocked: true };
+    };
+    verifier.verify = async () => blocked;
+    await expect(googleService.googleLogin({ idToken: 'token' }, ctx)).rejects.toMatchObject({ statusCode: 403 });
+  });
+});

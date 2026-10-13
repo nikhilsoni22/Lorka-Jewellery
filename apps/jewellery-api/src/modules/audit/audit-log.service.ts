@@ -7,6 +7,8 @@ export type AuditAction =
   | 'auth.admin.login'
   | 'auth.admin.login.failed'
   | 'auth.register'
+  | 'auth.google.login'
+  | 'auth.google.register'
   | 'auth.logout'
   | 'auth.refresh'
   | 'auth.password.reset'

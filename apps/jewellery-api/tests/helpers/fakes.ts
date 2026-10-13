@@ -115,6 +115,15 @@ export class FakeUserRepository implements IUserRepository {
     }
     return false;
   }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    const user = this.byId.get(userId);
+    if (user) {
+      user.emailVerified = true;
+      user.otpHash = null;
+      user.otpExpires = null;
+    }
+  }
 }
 
 export class FakeRefreshTokenRepository implements IRefreshTokenRepository {

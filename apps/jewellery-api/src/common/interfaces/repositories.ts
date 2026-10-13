@@ -50,6 +50,7 @@ export interface IUserRepository {
   setEmailOtp(userId: string, otpHash: string, expiresAt: Date): Promise<void>;
   /** Atomically verifies + consumes the OTP if it matches and hasn't expired; returns whether it succeeded. */
   consumeEmailOtpIfValid(userId: string, otpHash: string, now: Date): Promise<boolean>;
+  markEmailVerified(userId: string): Promise<void>;
 }
 
 export interface CreateRefreshTokenData {

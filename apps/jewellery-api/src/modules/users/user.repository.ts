@@ -109,4 +109,11 @@ export class UserRepository implements IUserRepository {
     ).exec();
     return result.modifiedCount > 0;
   }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await UserModel.updateOne(
+      { _id: userId },
+      { $set: { emailVerified: true, otpHash: null, otpExpires: null } },
+    ).exec();
+  }
 }

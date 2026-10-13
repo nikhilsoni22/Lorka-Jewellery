@@ -30,3 +30,15 @@ export interface IEmailService {
   sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void>;
   sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void>;
 }
+
+/** A Google account proven by a verified Firebase ID token. */
+export interface VerifiedGoogleIdentity {
+  uid: string;
+  email: string;
+  name?: string;
+}
+
+export interface IGoogleTokenVerifier {
+  /** Throws an `AppError` (401) if the token is invalid, expired, or not a verified Google sign-in. */
+  verify(idToken: string): Promise<VerifiedGoogleIdentity>;
+}

@@ -1,6 +1,11 @@
 import type { ApiResponse, LoginResult } from '@lorka/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
+/**
+ * `/auth/*` goes through this site's own relay (app/api/v1/auth) so the refresh cookie is a
+ * first-party cookie — browsers increasingly block the API domain's cookie as third-party.
+ */
+const AUTH_BASE = '/api/v1';
 
 /**
  * In-memory access token (never localStorage, to reduce XSS blast radius). Session
@@ -20,7 +25,8 @@ async function rawRequest<T>(path: string, init?: RequestInit): Promise<{ status
   };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers, credentials: 'include' });
+  const base = path.startsWith('/auth/') ? AUTH_BASE : API_URL;
+  const res = await fetch(`${base}${path}`, { ...init, headers, credentials: 'include' });
   const json = (await res.json()) as ApiResponse<T>;
   return { status: res.status, json };
 }
@@ -45,8 +51,20 @@ export const apiClient = {
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 };
 
-/** Attempts to restore a session from the refresh cookie on app load. */
-export async function bootstrapSession(): Promise<LoginResult | null> {
+/**
+ * Attempts to restore a session from the refresh cookie (on app load, or after a 401). Concurrent
+ * callers share one request — the API rotates the refresh token on every use, so parallel
+ * refreshes would otherwise race each other for the cookie.
+ */
+let refreshInFlight: Promise<LoginResult | null> | null = null;
+export function bootstrapSession(): Promise<LoginResult | null> {
+  refreshInFlight ??= refreshSession().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function refreshSession(): Promise<LoginResult | null> {
   try {
     const { json } = await rawRequest<LoginResult>('/auth/refresh', { method: 'POST' });
     if (json.success) {

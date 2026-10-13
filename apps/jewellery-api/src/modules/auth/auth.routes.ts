@@ -7,6 +7,7 @@ import {
   resetPasswordSchema,
   refreshSchema,
   verifyEmailOtpSchema,
+  googleLoginSchema,
 } from '@lorka/types';
 import { validate } from '../../common/middleware/validate';
 import { authGuard } from '../../common/middleware/auth';
@@ -44,8 +45,10 @@ export function createAuthRouter(c: AuthController): Router {
   );
   router.post('/verify-email/resend', authGuard, authLimiter, asyncHandler(c.resendEmailOtp));
 
+  // Responds 501 until FIREBASE_PROJECT_ID is configured.
+  router.post('/google', authLimiter, validate(googleLoginSchema), asyncHandler(c.google));
+
   // Deferred providers — respond 501 until credentials are configured.
-  router.post('/google', asyncHandler(c.googleStub));
   router.post('/otp/request', asyncHandler(c.otpRequestStub));
   router.post('/otp/verify', asyncHandler(c.otpVerifyStub));
 

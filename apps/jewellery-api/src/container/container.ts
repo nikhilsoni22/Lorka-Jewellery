@@ -13,6 +13,7 @@ import { logger } from '../common/logger/logger';
 import type { IEmailService } from '../common/interfaces/services';
 import { AuthService } from '../modules/auth/auth.service';
 import { AuthController } from '../modules/auth/auth.controller';
+import { FirebaseTokenVerifier } from '../modules/auth/firebase-token-verifier';
 import { CategoryRepository } from '../modules/category/category.repository';
 import { CategoryService } from '../modules/category/category.service';
 import { CategoryController } from '../modules/category/category.controller';
@@ -113,6 +114,7 @@ export function buildContainer(): AppContainer {
     refreshTokenRepository,
     emailService,
     auditLogService,
+    env.FIREBASE_PROJECT_ID ? new FirebaseTokenVerifier(env.FIREBASE_PROJECT_ID) : null,
   );
   const categoryService = new CategoryService(categoryRepository);
   const productService = new ProductService(productRepository, categoryRepository, settingsRepository);
