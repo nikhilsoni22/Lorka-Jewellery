@@ -14,6 +14,7 @@ import {
   adminUpiPaymentSubmittedEmail,
   paymentVerifiedEmail,
   paymentRejectedEmail,
+  unpaidOrderCancelledEmail,
 } from './email-templates';
 
 /** Sends email over Resend's HTTPS API instead of raw SMTP sockets — outbound HTTPS (443) works
@@ -79,6 +80,11 @@ export class ResendEmailService implements IEmailService {
 
   async sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void> {
     const { subject, html } = paymentRejectedEmail(order, reason);
+    await this.send(to, subject, html);
+  }
+
+  async sendUnpaidOrderCancelled(to: string, order: OrderResponse): Promise<void> {
+    const { subject, html } = unpaidOrderCancelledEmail(order);
     await this.send(to, subject, html);
   }
 

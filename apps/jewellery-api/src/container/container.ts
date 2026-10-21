@@ -59,6 +59,8 @@ export interface AppContainer {
   bannerController: BannerController;
   uploadController: UploadController;
   orderController: OrderController;
+  /** Exposed for background jobs started in main.ts. */
+  orderService: OrderService;
   paymentController: PaymentController;
   userController: UserController;
   ticketController: TicketController;
@@ -172,6 +174,7 @@ export function buildContainer(): AppContainer {
     bannerController,
     uploadController,
     orderController,
+    orderService,
     paymentController,
     userController,
     ticketController,

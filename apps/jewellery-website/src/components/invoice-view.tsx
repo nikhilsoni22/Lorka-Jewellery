@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Printer } from 'lucide-react';
 import type { OrderResponse, SettingsResponse } from '@lorka/types';
 import { apiClient } from '@/lib/api-client';
 import { useOrderLookup } from '@/lib/use-order-lookup';
-import { paymentMethodLabel, trackOrderHref } from '@/lib/order-tracking';
+import { isInvoiceAvailable, paymentMethodLabel, trackOrderHref } from '@/lib/order-tracking';
 import { EMPTY_STORE_INFO, normalizeSettings } from '@/lib/store-defaults';
 import { OrderNotFound } from '@/components/order-confirmation-view';
 
@@ -38,6 +38,22 @@ export function InvoiceView({ orderNumber, phone }: { orderNumber: string; phone
     return (
       <main className="container flex justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </main>
+    );
+  }
+
+  if (!isInvoiceAvailable(order)) {
+    return (
+      <main className="container max-w-lg py-20 text-center">
+        <h1 className="text-3xl">Invoice not available yet</h1>
+        <p className="mt-3 text-muted-foreground">
+          {order.status === 'cancelled'
+            ? 'This order was cancelled before it was paid, so there is no invoice for it.'
+            : 'Your invoice will be ready once we verify your UPI payment.'}
+        </p>
+        <Link href={trackOrderHref(order)} className="mt-6 inline-block text-sm font-medium text-gold underline-offset-4 hover:underline">
+          Back to order
+        </Link>
       </main>
     );
   }

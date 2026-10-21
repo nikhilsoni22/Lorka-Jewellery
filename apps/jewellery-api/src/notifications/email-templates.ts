@@ -54,6 +54,10 @@ function formatDate(value: string | Date): string {
   });
 }
 
+function isAwaitingUpiPayment(order: OrderResponse): boolean {
+  return order.paymentMethod === PaymentMethod.Upi && order.paymentStatus !== PaymentStatus.Paid && order.paymentStatus !== PaymentStatus.Refunded;
+}
+
 function renderOrderConfirmationHtml(
   order: OrderResponse,
   audience: 'customer' | 'admin' = 'customer',
@@ -91,7 +95,7 @@ function renderOrderConfirmationHtml(
     <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
       ${heading}
 
-      <h2 style="font-size:16px;margin-top:24px;">Invoice — ${order.orderNumber}</h2>
+      <h2 style="font-size:16px;margin-top:24px;">${isAwaitingUpiPayment(order) ? 'Order summary' : 'Invoice'} — ${order.orderNumber}</h2>
       <p style="color:#666;font-size:13px;">Placed on ${formatDateTime(order.createdAt)}</p>
 
       <table style="width:100%;border-collapse:collapse;margin-top:12px;">
@@ -143,8 +147,10 @@ function renderOrderConfirmationHtml(
       <p style="margin-top:24px;color:#666;font-size:13px;">
         Payment method: ${order.paymentMethod.toUpperCase()} (${order.paymentStatus})
         ${
-          audience === 'customer' && order.paymentMethod === PaymentMethod.Upi && order.paymentStatus === PaymentStatus.Pending
-            ? `<br />Haven't paid yet? <a href="${trackOrderUrl(order)}">Open your order</a> to pay by UPI and enter the transaction ID — we'll email you as soon as the payment is verified.`
+          audience === 'customer' && isAwaitingUpiPayment(order)
+            ? `<br />Haven't paid yet? <a href="${trackOrderUrl(order)}">Open your order</a> to pay by UPI and enter the transaction ID${
+                order.upiPaymentDueAt ? ` by ${formatDateTime(order.upiPaymentDueAt)} (unpaid orders are cancelled automatically)` : ''
+              } — we'll email you as soon as the payment is verified.`
             : ''
         }
         ${order.hasBuildItems ? '<br />This order includes made-to-order item(s) — we\'ll confirm the build timeline separately.' : ''}
@@ -385,6 +391,22 @@ export function paymentRejectedEmail(order: OrderResponse, reason: string): Emai
         <p>If you have paid, please open your order and enter the correct UPI transaction ID (UTR) from your
         UPI app, or reply to this email and we'll sort it out.</p>
         ${trackOrderButton(order, 'Open your order')}
+        <p style="margin-top:24px;">With love,<br />Lorka Jewellers</p>
+      </div>
+    `,
+  };
+}
+
+export function unpaidOrderCancelledEmail(order: OrderResponse): EmailContent {
+  return {
+    subject: `Order cancelled — payment not received — ${order.orderNumber} | Lorka Jewellers`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+        <h1 style="font-size:22px;">Your order has been cancelled</h1>
+        <p>Hi ${escapeHtml(order.customerName)}, we didn't receive the UPI payment of <strong>₹${order.total}</strong>
+        for order <strong>${order.orderNumber}</strong> in time, so it has been cancelled automatically.</p>
+        <p>If you have already paid, please reply to this email with the UPI transaction ID (UTR) and we'll
+        sort it out right away. Otherwise you're welcome to place the order again any time.</p>
         <p style="margin-top:24px;">With love,<br />Lorka Jewellers</p>
       </div>
     `,

@@ -28,6 +28,7 @@ const paymentMethodsSchema = new Schema(
     upiEnabled: { type: Boolean, default: false },
     upiId: { type: String, default: '' },
     upiPayeeName: { type: String, default: '' },
+    upiPaymentWindowHours: { type: Number, default: 24, min: 1, max: 168 },
   },
   { _id: false },
 );

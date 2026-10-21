@@ -49,6 +49,8 @@ export const paymentMethodsInputSchema = z
       .optional()
       .default(''),
     upiPayeeName: z.string().trim().max(60).optional().default(''),
+    /** Unpaid UPI orders (no transaction ID entered) are cancelled this many hours after placing. */
+    upiPaymentWindowHours: z.coerce.number().int().min(1).max(168).optional().default(24),
   })
   .superRefine((data, ctx) => {
     if (data.upiEnabled && !data.upiId) {

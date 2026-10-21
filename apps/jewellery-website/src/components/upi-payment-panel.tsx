@@ -7,6 +7,7 @@ import type { OrderResponse, SettingsResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
 import { normalizeSettings } from '@/lib/store-defaults';
+import { formatDateTime } from '@/lib/order-tracking';
 import { cn } from '@/lib/utils';
 
 /** The standard UPI deep link — opens any UPI app with the payee, amount and note filled in. */
@@ -131,6 +132,13 @@ export function UpiPaymentPanel({
             Pay exactly <span className="font-semibold text-foreground">₹{order.total}</span> to confirm order{' '}
             {order.orderNumber}.
           </p>
+          {order.upiPaymentDueAt && !order.upiReference && (
+            <p className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+              Please pay and enter the transaction ID by {formatDateTime(order.upiPaymentDueAt)} — unpaid orders are
+              cancelled automatically.
+            </p>
+          )}
           {rejected && (
             <p className="mt-3 flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
               <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />

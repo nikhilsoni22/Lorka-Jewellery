@@ -193,6 +193,13 @@ export interface IOrderRepository {
    * Throws `DuplicateUpiReferenceError` if another order already has this UTR.
    */
   submitUpiReference(id: string, upiReference: string, from: PaymentStatus[]): Promise<OrderEntity | null>;
+  /** UPI orders past `upiPaymentDueAt` with no transaction ID entered (see `cancelIfAwaitingUpiPayment`). */
+  findOverdueUpiOrderIds(now: Date): Promise<string[]>;
+  /**
+   * Cancels the order only if it is still an overdue, unpaid UPI order with no transaction ID —
+   * atomic, so a UTR submitted at the same moment always wins. Null if it no longer qualifies.
+   */
+  cancelIfAwaitingUpiPayment(id: string, now: Date): Promise<OrderEntity | null>;
   /** Moves a UPI order's payment from one of `from` to `to` (the admin's verify / reject). */
   setUpiPaymentStatus(id: string, from: PaymentStatus[], to: PaymentStatus): Promise<OrderEntity | null>;
   /** Adds `amount` to the refunded total; `fullyRefunded` flips paymentStatus to refunded. */

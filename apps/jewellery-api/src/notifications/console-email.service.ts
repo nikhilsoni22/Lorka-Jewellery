@@ -75,4 +75,8 @@ export class ConsoleEmailService implements IEmailService {
   async sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void> {
     logger.info({ to, orderNumber: order.orderNumber, reason }, '[email] Payment rejected (dev — not actually sent)');
   }
+
+  async sendUnpaidOrderCancelled(to: string, order: OrderResponse): Promise<void> {
+    logger.info({ to, orderNumber: order.orderNumber }, '[email] Unpaid UPI order cancelled (dev — not actually sent)');
+  }
 }

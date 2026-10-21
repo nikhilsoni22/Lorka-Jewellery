@@ -193,7 +193,7 @@ export class FakeSettingsRepository implements ISettingsRepository {
     goldRatePer10g: 70000,
     charges: [],
     maintenance: { enabled: false, message: '' },
-    paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '' },
+    paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '', upiPaymentWindowHours: 24 },
     createdAt: new Date(),
     updatedAt: new Date(),
   };

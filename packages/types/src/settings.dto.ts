@@ -27,6 +27,8 @@ export interface PaymentMethodsResponse {
   upiId: string;
   /** Name shown in the customer's UPI app — usually the name on the bank account. */
   upiPayeeName: string;
+  /** Hours a customer has to pay a UPI order before it is cancelled automatically. */
+  upiPaymentWindowHours: number;
 }
 
 /** Public contact details shown in the website footer, contact page and WhatsApp button. */

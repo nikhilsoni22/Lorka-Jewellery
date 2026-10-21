@@ -35,6 +35,8 @@ export interface IEmailService {
   sendPaymentVerified(to: string, order: OrderResponse): Promise<void>;
   /** Admin couldn't find the customer's UPI payment; `reason` is optional free text from the admin. */
   sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void>;
+  /** A UPI order was cancelled automatically because it wasn't paid in time. */
+  sendUnpaidOrderCancelled(to: string, order: OrderResponse): Promise<void>;
 }
 
 /** A Google account proven by a verified Firebase ID token. */

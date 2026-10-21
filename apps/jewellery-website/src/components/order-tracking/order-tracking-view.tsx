@@ -25,7 +25,14 @@ import type { OrderResponse } from '@lorka/types';
 import { useOrderLookup } from '@/lib/use-order-lookup';
 import { optimizedImage } from '@/lib/image';
 import { cn } from '@/lib/utils';
-import { STATUS_COPY, formatDateTime, formatDay, getTrackingState, paymentMethodLabel } from '@/lib/order-tracking';
+import {
+  STATUS_COPY,
+  formatDateTime,
+  formatDay,
+  getTrackingState,
+  isInvoiceAvailable,
+  paymentMethodLabel,
+} from '@/lib/order-tracking';
 import { UpiPaymentPanel } from '@/components/upi-payment-panel';
 import { OrderStepper } from './order-stepper';
 import { TrackOrderForm } from './track-order-form';
@@ -385,12 +392,18 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
                 show it.
               </p>
             )}
-            <Link
-              href={`/invoice?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`}
-              className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.15em] text-gold underline-offset-4 hover:underline"
-            >
-              <FileText className="h-3.5 w-3.5" /> Download invoice
-            </Link>
+            {isInvoiceAvailable(order) ? (
+              <Link
+                href={`/invoice?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`}
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.15em] text-gold underline-offset-4 hover:underline"
+              >
+                <FileText className="h-3.5 w-3.5" /> Download invoice
+              </Link>
+            ) : (
+              order.status !== 'cancelled' && (
+                <p className="mt-4 text-xs text-muted-foreground">Your invoice will be available once the payment is verified.</p>
+              )
+            )}
           </Card>
 
           {order.giftWrap && (

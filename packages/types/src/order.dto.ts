@@ -65,6 +65,8 @@ export interface OrderResponse {
   /** UPI transaction ID / UTR the customer entered after paying — the admin matches it in the bank. */
   upiReference?: string;
   upiSubmittedAt?: string;
+  /** UPI orders only: cancelled automatically if no transaction ID is entered by then. */
+  upiPaymentDueAt?: string;
   /** When the admin confirmed a UPI payment reached the account. */
   paymentVerifiedAt?: string;
   customerName: string;

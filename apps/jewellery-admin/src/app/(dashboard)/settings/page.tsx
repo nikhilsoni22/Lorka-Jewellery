@@ -65,6 +65,7 @@ export default function SettingsPage() {
     upiEnabled: false,
     upiId: '',
     upiPayeeName: '',
+    upiPaymentWindowHours: '24',
   });
   const [notificationEmail, setNotificationEmail] = useState('');
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
@@ -100,6 +101,7 @@ export default function SettingsPage() {
       upiEnabled: data.paymentMethods?.upiEnabled ?? false,
       upiId: data.paymentMethods?.upiId ?? '',
       upiPayeeName: data.paymentMethods?.upiPayeeName ?? '',
+      upiPaymentWindowHours: String(data.paymentMethods?.upiPaymentWindowHours ?? 24),
     });
     setNotificationEmail(data.notificationEmail ?? '');
     setRazorpayKeyId(data.razorpayKeyId ?? '');
@@ -157,6 +159,11 @@ export default function SettingsPage() {
       toast.error('Add your UPI ID to turn on UPI payments');
       return;
     }
+    const upiPaymentWindowHours = Number(paymentMethods.upiPaymentWindowHours);
+    if (!Number.isInteger(upiPaymentWindowHours) || upiPaymentWindowHours < 1 || upiPaymentWindowHours > 168) {
+      toast.error('UPI payment time: enter whole hours between 1 and 168');
+      return;
+    }
     if (upiId && !/^[\w.-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,64}$/.test(upiId)) {
       toast.error('Enter a valid UPI ID — e.g. lorka@okaxis');
       return;
@@ -179,7 +186,12 @@ export default function SettingsPage() {
           endAt: maintenance.endAt ? new Date(maintenance.endAt) : undefined,
           message: maintenance.message,
         },
-        paymentMethods: { ...paymentMethods, upiId, upiPayeeName: paymentMethods.upiPayeeName.trim() },
+        paymentMethods: {
+          ...paymentMethods,
+          upiId,
+          upiPayeeName: paymentMethods.upiPayeeName.trim(),
+          upiPaymentWindowHours,
+        },
         notificationEmail: notificationEmail.trim() || undefined,
         razorpayKeyId: razorpayKeyId.trim() || undefined,
         razorpayKeySecret: razorpayKeySecret.trim() || undefined,
@@ -419,6 +431,21 @@ export default function SettingsPage() {
                     onChange={(e) => setPaymentMethods((m) => ({ ...m, upiPayeeName: e.target.value }))}
                     placeholder="Name on the bank account"
                   />
+                </div>
+                <div className="space-y-1">
+                  <Label>Time to pay (hours)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="168"
+                    step="1"
+                    value={paymentMethods.upiPaymentWindowHours}
+                    onChange={(e) => setPaymentMethods((m) => ({ ...m, upiPaymentWindowHours: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Orders with no transaction ID entered by then are cancelled automatically and their stock is
+                    released. Orders with a transaction ID are never auto-cancelled — you review those.
+                  </p>
                 </div>
               </div>
               {!notificationEmail.trim() && (

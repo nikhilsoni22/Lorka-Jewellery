@@ -54,6 +54,7 @@ export function toOrderResponse(order: OrderEntity): OrderResponse {
     razorpayPaymentId: order.razorpayPaymentId,
     upiReference: order.upiReference,
     upiSubmittedAt: order.upiSubmittedAt ? order.upiSubmittedAt.toISOString() : undefined,
+    upiPaymentDueAt: order.upiPaymentDueAt ? order.upiPaymentDueAt.toISOString() : undefined,
     paymentVerifiedAt: order.paymentVerifiedAt ? order.paymentVerifiedAt.toISOString() : undefined,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
@@ -186,6 +187,10 @@ export class OrderService {
         paymentStatus: paid ? PaymentStatus.Paid : PaymentStatus.Pending,
         razorpayOrderId: payment?.razorpayOrderId,
         razorpayPaymentId: payment?.razorpayPaymentId,
+        upiPaymentDueAt:
+          method === PaymentMethod.Upi
+            ? new Date(Date.now() + priced.settings.paymentMethods.upiPaymentWindowHours * 3_600_000)
+            : null,
         customerName: input.customerName,
         customerPhone: input.customerPhone,
         customerEmail: input.customerEmail,
@@ -358,13 +363,7 @@ export class OrderService {
     if (previous.status === input.status) return toOrderResponse(previous);
 
     if (input.status === OrderStatus.Cancelled && previous.status !== OrderStatus.Cancelled) {
-      // Made-to-order items never took stock, so only regular items go back on the shelf.
-      await Promise.all(
-        previous.items
-          .filter((item) => !item.isBuildOrder)
-          .map((item) => this.products.incrementStock(item.productId, item.quantity)),
-      );
-      if (previous.couponCode) await this.coupons.release(previous.couponCode);
+      await this.releaseReservations(previous);
     }
 
     const updated = await this.orders.updateStatus(id, input.status);
@@ -372,6 +371,35 @@ export class OrderService {
     const response = toOrderResponse(updated);
     void this.sendStatusUpdateEmail(response, updated.userId);
     return response;
+  }
+
+  /**
+   * Cancels UPI orders whose payment window ran out without the customer entering a transaction
+   * ID, putting their stock and coupon back. Orders with a UTR are left for the admin to review.
+   * Safe to run from several instances at once — each order is cancelled at most once.
+   */
+  async cancelOverdueUpiOrders(now = new Date()): Promise<number> {
+    const ids = await this.orders.findOverdueUpiOrderIds(now);
+    let cancelled = 0;
+    for (const id of ids) {
+      const order = await this.orders.cancelIfAwaitingUpiPayment(id, now);
+      if (!order) continue;
+      cancelled++;
+      await this.releaseReservations(order);
+      void this.sendUnpaidCancelledEmail(toOrderResponse(order), order.userId);
+      logger.info({ orderNumber: order.orderNumber }, '[order] Unpaid UPI order cancelled automatically');
+    }
+    return cancelled;
+  }
+
+  /** Made-to-order items never took stock, so only regular items go back on the shelf. */
+  private async releaseReservations(order: OrderEntity): Promise<void> {
+    await Promise.all(
+      order.items
+        .filter((item) => !item.isBuildOrder)
+        .map((item) => this.products.incrementStock(item.productId, item.quantity)),
+    );
+    if (order.couponCode) await this.coupons.release(order.couponCode);
   }
 
   async setBuildEta(id: string, estimatedReadyDate: Date): Promise<OrderResponse> {
@@ -429,6 +457,17 @@ export class OrderService {
       else await this.email.sendPaymentRejected(recipient, order, reason);
     } catch (err) {
       logger.error({ err, orderNumber: order.orderNumber }, '[order] Failed to send payment review email');
+    }
+  }
+
+  /** Best-effort: tells the customer their unpaid UPI order was cancelled automatically. */
+  private async sendUnpaidCancelledEmail(order: OrderResponse, userId?: string | null): Promise<void> {
+    try {
+      const recipient = await this.resolveRecipient(order, userId ?? undefined);
+      if (!recipient) return;
+      await this.email.sendUnpaidOrderCancelled(recipient, order);
+    } catch (err) {
+      logger.error({ err, orderNumber: order.orderNumber }, '[order] Failed to send unpaid-cancel email');
     }
   }
 

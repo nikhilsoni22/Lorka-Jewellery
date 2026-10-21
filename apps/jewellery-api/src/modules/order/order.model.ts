@@ -77,6 +77,7 @@ const orderSchema = new Schema(
     razorpayPaymentId: { type: String, default: '' },
     upiReference: { type: String, default: '' },
     upiSubmittedAt: { type: Date, default: null },
+    upiPaymentDueAt: { type: Date, default: null },
     paymentVerifiedAt: { type: Date, default: null },
     customerName: { type: String, required: true, trim: true },
     customerPhone: { type: String, required: true, trim: true, index: true },

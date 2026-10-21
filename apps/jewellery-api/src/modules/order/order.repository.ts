@@ -24,6 +24,7 @@ function toEntity(doc: OrderDocument): OrderEntity {
     razorpayPaymentId: doc.razorpayPaymentId || undefined,
     upiReference: doc.upiReference || undefined,
     upiSubmittedAt: doc.upiSubmittedAt ?? null,
+    upiPaymentDueAt: doc.upiPaymentDueAt ?? null,
     paymentVerifiedAt: doc.paymentVerifiedAt ?? null,
     customerName: doc.customerName,
     customerPhone: doc.customerPhone,
@@ -59,6 +60,17 @@ function toEntity(doc: OrderDocument): OrderEntity {
     estimatedReadyDate: doc.estimatedReadyDate ?? null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+  };
+}
+
+/** A UPI order past its payment deadline that the customer never entered a transaction ID for. */
+function awaitingUpiPayment(now: Date) {
+  return {
+    paymentMethod: PaymentMethod.Upi,
+    status: OrderStatus.Pending,
+    paymentStatus: PaymentStatus.Pending,
+    upiReference: { $in: ['', null] },
+    upiPaymentDueAt: { $ne: null, $lte: now },
   };
 }
 
@@ -131,7 +143,7 @@ export class OrderRepository implements IOrderRepository {
   async submitUpiReference(id: string, upiReference: string, from: PaymentStatus[]): Promise<OrderEntity | null> {
     try {
       const doc = await OrderModel.findOneAndUpdate(
-        { _id: id, paymentMethod: PaymentMethod.Upi, paymentStatus: { $in: from } },
+        { _id: id, paymentMethod: PaymentMethod.Upi, paymentStatus: { $in: from }, status: { $ne: OrderStatus.Cancelled } },
         { $set: { upiReference, upiSubmittedAt: new Date(), paymentStatus: PaymentStatus.Pending } },
         { new: true },
       )
@@ -145,6 +157,25 @@ export class OrderRepository implements IOrderRepository {
       }
       throw err;
     }
+  }
+
+  async findOverdueUpiOrderIds(now: Date): Promise<string[]> {
+    const docs = await OrderModel.find(awaitingUpiPayment(now), { _id: 1 }).lean().exec();
+    return docs.map((d) => d._id.toString());
+  }
+
+  async cancelIfAwaitingUpiPayment(id: string, now: Date): Promise<OrderEntity | null> {
+    const doc = await OrderModel.findOneAndUpdate(
+      { _id: id, ...awaitingUpiPayment(now) },
+      {
+        $set: { status: OrderStatus.Cancelled },
+        $push: { statusHistory: { status: OrderStatus.Cancelled, at: now } },
+      },
+      { new: true },
+    )
+      .lean<OrderDocument>()
+      .exec();
+    return doc ? toEntity(doc) : null;
   }
 
   async setUpiPaymentStatus(id: string, from: PaymentStatus[], to: PaymentStatus): Promise<OrderEntity | null> {

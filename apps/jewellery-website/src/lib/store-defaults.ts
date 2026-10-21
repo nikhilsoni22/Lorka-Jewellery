@@ -17,7 +17,7 @@ export const FALLBACK_SETTINGS: SettingsResponse = {
   goldRatePer10g: 0,
   charges: [],
   maintenance: { enabled: false, message: '' },
-  paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '' },
+  paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '', upiPaymentWindowHours: 24 },
   storeInfo: EMPTY_STORE_INFO,
   policies: { privacy: '', terms: '', refund: '', shipping: '' },
 };

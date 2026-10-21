@@ -131,6 +131,7 @@ export interface OrderEntity {
   razorpayPaymentId?: string;
   upiReference?: string;
   upiSubmittedAt?: Date | null;
+  upiPaymentDueAt?: Date | null;
   paymentVerifiedAt?: Date | null;
   customerName: string;
   customerPhone: string;
@@ -227,6 +228,7 @@ export interface PaymentMethodsEntity {
   upiEnabled: boolean;
   upiId: string;
   upiPayeeName: string;
+  upiPaymentWindowHours: number;
 }
 
 export interface SettingsEntity {

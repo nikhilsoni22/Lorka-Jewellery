@@ -104,6 +104,12 @@ export function paymentMethodLabel(order: Pick<OrderResponse, 'paymentMethod' | 
   return order.paymentStatus === 'paid' || order.paymentStatus === 'refunded' ? 'Paid by UPI' : 'UPI';
 }
 
+/** A UPI order only gets an invoice once its payment is verified — until then nothing is paid. */
+export function isInvoiceAvailable(order: Pick<OrderResponse, 'paymentMethod' | 'paymentStatus'>): boolean {
+  if (order.paymentMethod !== 'upi') return true;
+  return order.paymentStatus === 'paid' || order.paymentStatus === 'refunded';
+}
+
 export function trackOrderHref(order: Pick<OrderResponse, 'orderNumber' | 'customerPhone'>) {
   return `/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`;
 }

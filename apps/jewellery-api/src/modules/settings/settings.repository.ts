@@ -28,6 +28,7 @@ function toEntity(doc: SettingsDocument): SettingsEntity {
       upiEnabled: doc.paymentMethods?.upiEnabled ?? false,
       upiId: doc.paymentMethods?.upiId ?? '',
       upiPayeeName: doc.paymentMethods?.upiPayeeName ?? '',
+      upiPaymentWindowHours: doc.paymentMethods?.upiPaymentWindowHours ?? 24,
     },
     notificationEmail: doc.notificationEmail || undefined,
     razorpayKeyId: doc.razorpayKeyId || undefined,
@@ -99,6 +100,7 @@ export class SettingsRepository implements ISettingsRepository {
       upiEnabled: data.paymentMethods.upiEnabled,
       upiId: data.paymentMethods.upiId,
       upiPayeeName: data.paymentMethods.upiPayeeName,
+      upiPaymentWindowHours: data.paymentMethods.upiPaymentWindowHours,
     });
     doc.set('notificationEmail', data.notificationEmail ?? '');
     doc.set('razorpayKeyId', data.razorpayKeyId ?? '');

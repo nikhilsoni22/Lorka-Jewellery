@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import type { Express } from 'express';
 import { UserRole } from '@lorka/types';
 import { createApp, API_BASE_PATH } from '../../src/app';
+import { buildContainer, type AppContainer } from '../../src/container/container';
 import { signAccessToken } from '../../src/common/security/tokens';
 import { CategoryModel } from '../../src/modules/category/category.model';
 import { ProductModel } from '../../src/modules/product/product.model';
@@ -17,6 +18,7 @@ const base = API_BASE_PATH;
 const PHONE = '9876543210';
 let mongod: MongoMemoryServer;
 let app: Express;
+let container: AppContainer;
 let adminToken: string;
 let customerToken: string;
 
@@ -24,7 +26,8 @@ beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
   await OrderModel.syncIndexes();
-  app = createApp();
+  container = buildContainer();
+  app = createApp(container);
   adminToken = signAccessToken({ sub: '65f0c0c0c0c0c0c0c0c0c001', role: UserRole.SuperAdmin });
 }, 120_000);
 
@@ -49,8 +52,24 @@ beforeEach(async () => {
   });
 });
 
-/** Silver at ₹100/g: 10g + ₹200 making = ₹1200. */
-async function placeUpiOrder() {
+/** Silver at ₹100/g: 10g + ₹200 making = ₹1200. Pass a product id to order the same product again. */
+async function placeUpiOrder(existingProductId?: string) {
+  const productId = existingProductId ?? (await seedProduct());
+  const res = await request(app)
+    .post(`${base}/orders`)
+    .set('Authorization', `Bearer ${customerToken}`)
+    .send({
+      customerName: 'Asha Verma',
+      customerPhone: PHONE,
+      shippingAddress: { line1: '12 Main Road', city: 'Jodhpur', state: 'Rajasthan', postalCode: '342001' },
+      items: [{ productId, quantity: 1 }],
+      paymentMethod: 'upi',
+    });
+  expect(res.status).toBe(201);
+  return { ...(res.body.data as { id: string; orderNumber: string; upiPaymentDueAt?: string }), productId };
+}
+
+async function seedProduct() {
   const category = await CategoryModel.create({ name: 'Rings', slug: 'rings' });
   const product = await ProductModel.create({
     name: 'Classic Silver Ring',
@@ -63,18 +82,7 @@ async function placeUpiOrder() {
     images: ['https://example.com/ring.jpg'],
     stock: 5,
   });
-  const res = await request(app)
-    .post(`${base}/orders`)
-    .set('Authorization', `Bearer ${customerToken}`)
-    .send({
-      customerName: 'Asha Verma',
-      customerPhone: PHONE,
-      shippingAddress: { line1: '12 Main Road', city: 'Jodhpur', state: 'Rajasthan', postalCode: '342001' },
-      items: [{ productId: product._id.toString(), quantity: 1 }],
-      paymentMethod: 'upi',
-    });
-  expect(res.status).toBe(201);
-  return res.body.data as { id: string; orderNumber: string };
+  return product._id.toString();
 }
 
 const submitUtr = (orderNumber: string, upiReference: string) =>
@@ -126,9 +134,7 @@ describe('UPI payments', () => {
   it('refuses a UTR that already paid for another order', async () => {
     const first = await placeUpiOrder();
     await submitUtr(first.orderNumber, '412345678901').expect(200);
-    await ProductModel.deleteMany({});
-    await CategoryModel.deleteMany({});
-    const second = await placeUpiOrder();
+    const second = await placeUpiOrder(first.productId);
     expect((await submitUtr(second.orderNumber, '412345678901')).status).toBe(409);
   });
 
@@ -156,6 +162,33 @@ describe('UPI payments', () => {
 
     const cod = await request(app).post(`${base}/orders`).set('Authorization', `Bearer ${customerToken}`).send({ ...body, paymentMethod: 'cod' });
     expect((await review(cod.body.data.id, { action: 'verify' })).status).toBe(400);
+  });
+
+  it('auto-cancels unpaid UPI orders after the payment window, but never ones with a UTR', async () => {
+    const cancelledEmail = vi.spyOn(ConsoleEmailService.prototype, 'sendUnpaidOrderCancelled');
+    const unpaid = await placeUpiOrder();
+    const hoursLeft = (new Date(unpaid.upiPaymentDueAt!).getTime() - Date.now()) / 3_600_000;
+    expect(hoursLeft).toBeGreaterThan(23.9);
+    expect(hoursLeft).toBeLessThanOrEqual(24);
+    const submitted = await placeUpiOrder(unpaid.productId);
+    await submitUtr(submitted.orderNumber, '412345678901').expect(200);
+    expect((await ProductModel.findById(unpaid.productId).lean())?.stock).toBe(3);
+
+    // Not due yet: nothing happens.
+    expect(await container.orderService.cancelOverdueUpiOrders()).toBe(0);
+
+    await OrderModel.updateMany({}, { upiPaymentDueAt: new Date(Date.now() - 60_000) });
+    expect(await container.orderService.cancelOverdueUpiOrders()).toBe(1);
+    expect(await container.orderService.cancelOverdueUpiOrders()).toBe(0);
+
+    expect(await OrderModel.findById(unpaid.id).lean()).toMatchObject({ status: 'cancelled' });
+    expect(await OrderModel.findById(submitted.id).lean()).toMatchObject({ status: 'pending', paymentStatus: 'pending' });
+    expect((await ProductModel.findById(unpaid.productId).lean())?.stock).toBe(4);
+    await vi.waitFor(() =>
+      expect(cancelledEmail).toHaveBeenCalledWith('asha@example.com', expect.objectContaining({ orderNumber: unpaid.orderNumber })),
+    );
+    // Too late to pay a cancelled order.
+    expect((await submitUtr(unpaid.orderNumber, '412345678999')).status).toBe(400);
   });
 
   it('requires a UPI ID before UPI can be switched on in settings', async () => {

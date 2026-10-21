@@ -265,7 +265,14 @@ export default function OrderDetailPage() {
                     {order.upiSubmittedAt && ` · entered ${new Date(order.upiSubmittedAt).toLocaleString()}`}
                   </p>
                 ) : (
-                  order.paymentStatus === 'pending' && <p>Customer hasn&apos;t entered a UPI transaction ID yet.</p>
+                  order.paymentStatus === 'pending' && (
+                    <p>
+                      Customer hasn&apos;t entered a UPI transaction ID yet.
+                      {order.upiPaymentDueAt &&
+                        order.status !== 'cancelled' &&
+                        ` Auto-cancels ${new Date(order.upiPaymentDueAt).toLocaleString()} if still unpaid.`}
+                    </p>
+                  )
                 )}
                 {order.paymentVerifiedAt && <p>Verified on {new Date(order.paymentVerifiedAt).toLocaleString()}</p>}
                 {order.paymentStatus === 'failed' && (
