@@ -25,7 +25,8 @@ import type { OrderResponse } from '@lorka/types';
 import { useOrderLookup } from '@/lib/use-order-lookup';
 import { optimizedImage } from '@/lib/image';
 import { cn } from '@/lib/utils';
-import { STATUS_COPY, formatDateTime, formatDay, getTrackingState } from '@/lib/order-tracking';
+import { STATUS_COPY, formatDateTime, formatDay, getTrackingState, paymentMethodLabel } from '@/lib/order-tracking';
+import { UpiPaymentPanel } from '@/components/upi-payment-panel';
 import { OrderStepper } from './order-stepper';
 import { TrackOrderForm } from './track-order-form';
 
@@ -258,6 +259,8 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
         </div>
       </section>
 
+      <UpiPaymentPanel order={order} onUpdated={setOrder} className="mt-6" />
+
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">
           {/* Updates feed */}
@@ -371,7 +374,7 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
             </dl>
             <div className="mt-4 flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2.5 text-xs">
               <span className="text-muted-foreground">
-                {order.paymentMethod === 'razorpay' ? 'Paid online' : 'Cash on Delivery'}
+                {paymentMethodLabel(order)}
               </span>
               <PaymentPill order={order} />
             </div>
@@ -473,11 +476,19 @@ function PaymentPill({ order }: { order: OrderResponse }) {
     return <span className="rounded-full bg-sky-100 px-2.5 py-0.5 font-medium text-sky-800">Refunded</span>;
   }
   if (order.paymentStatus === 'failed') {
-    return <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 font-medium text-destructive">Failed</span>;
+    return (
+      <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 font-medium text-destructive">
+        {order.paymentMethod === 'upi' ? 'Not verified' : 'Failed'}
+      </span>
+    );
   }
   return (
     <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800">
-      {order.paymentMethod === 'cod' ? 'Pay on delivery' : 'Pending'}
+      {order.paymentMethod === 'cod'
+        ? 'Pay on delivery'
+        : order.paymentMethod === 'upi' && order.upiReference
+          ? 'Verifying'
+          : 'Pending'}
     </span>
   );
 }

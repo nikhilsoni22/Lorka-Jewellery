@@ -11,6 +11,8 @@ export const ORDER_STATUSES = Object.values(OrderStatus);
 export enum PaymentMethod {
   Cod = 'cod',
   Razorpay = 'razorpay',
+  /** Paid straight to the store's UPI ID; the admin checks the bank and verifies it by hand. */
+  Upi = 'upi',
 }
 
 export const PAYMENT_METHODS = Object.values(PaymentMethod);

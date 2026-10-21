@@ -22,6 +22,11 @@ export interface PaymentMethodsResponse {
   /** Online payment via Razorpay (card / UPI / netbanking). */
   onlineEnabled: boolean;
   codEnabled: boolean;
+  /** Manual UPI: the customer pays `upiId` from their UPI app, then the admin verifies it. */
+  upiEnabled: boolean;
+  upiId: string;
+  /** Name shown in the customer's UPI app — usually the name on the bank account. */
+  upiPayeeName: string;
 }
 
 /** Public contact details shown in the website footer, contact page and WhatsApp button. */

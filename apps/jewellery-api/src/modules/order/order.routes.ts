@@ -6,6 +6,8 @@ import {
   refundOrderSchema,
   orderQuerySchema,
   trackOrderQuerySchema,
+  submitUpiPaymentSchema,
+  reviewPaymentSchema,
   UserRole,
 } from '@lorka/types';
 import { validate } from '../../common/middleware/validate';
@@ -25,6 +27,8 @@ export function createOrderRouter(c: OrderController): Router {
   // Owner-scoped lookup, so signed-in customers can poll live tracking without the strict
   // orderNumber+phone limiter that guards guest lookups against enumeration.
   router.get('/mine/:orderNumber', authGuard, asyncHandler(c.mineByNumber));
+  // Located by orderNumber + phone like /track, so it shares that endpoint's enumeration limiter.
+  router.post('/upi-payment', orderTrackLimiter, validate(submitUpiPaymentSchema), asyncHandler(c.submitUpiPayment));
   router.post(
     '/',
     optionalAuth,
@@ -38,6 +42,7 @@ export function createOrderRouter(c: OrderController): Router {
   router.get('/:id', ...adminOnly, asyncHandler(c.getById));
   router.patch('/:id/status', ...adminOnly, validate(updateOrderStatusSchema), asyncHandler(c.updateStatus));
   router.patch('/:id/build-eta', ...adminOnly, validate(setBuildEtaSchema), asyncHandler(c.setBuildEta));
+  router.patch('/:id/payment', ...adminOnly, validate(reviewPaymentSchema), asyncHandler(c.reviewPayment));
   router.post('/:id/refund', ...adminOnly, validate(refundOrderSchema), asyncHandler(c.refund));
 
   return router;

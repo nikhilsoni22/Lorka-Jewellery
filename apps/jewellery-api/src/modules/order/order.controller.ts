@@ -59,6 +59,16 @@ export class OrderController {
     sendSuccess(res, order);
   };
 
+  submitUpiPayment = async (req: Request, res: Response): Promise<void> => {
+    const order = await this.orders.submitUpiPayment(req.body);
+    sendSuccess(res, order);
+  };
+
+  reviewPayment = async (req: Request, res: Response): Promise<void> => {
+    const order = await this.orders.reviewPayment(req.params.id as string, req.body);
+    sendSuccess(res, order);
+  };
+
   refund = async (req: Request, res: Response): Promise<void> => {
     const order = await this.orders.refund(req.params.id as string, req.body);
     sendSuccess(res, order);

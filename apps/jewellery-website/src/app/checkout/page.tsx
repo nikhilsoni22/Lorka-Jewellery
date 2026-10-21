@@ -98,7 +98,7 @@ declare global {
   }
 }
 
-type PaymentMethod = 'razorpay' | 'cod';
+type PaymentMethod = 'razorpay' | 'cod' | 'upi';
 
 export default function CheckoutPage() {
   return (
@@ -130,6 +130,8 @@ function CheckoutForm() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
   const onlineEnabled = settings?.paymentMethods?.onlineEnabled ?? true;
   const codEnabled = settings?.paymentMethods?.codEnabled ?? true;
+  const upiEnabled = Boolean(settings?.paymentMethods?.upiEnabled && settings.paymentMethods.upiId);
+  const noPaymentMethod = !onlineEnabled && !codEnabled && !upiEnabled;
   const [form, setForm] = useState({
     customerName: '',
     customerPhone: '',
@@ -247,9 +249,11 @@ function CheckoutForm() {
 
   // Keep the selection on a method the admin hasn't disabled.
   useEffect(() => {
-    if (paymentMethod === 'razorpay' && !onlineEnabled && codEnabled) setPaymentMethod('cod');
-    if (paymentMethod === 'cod' && !codEnabled && onlineEnabled) setPaymentMethod('razorpay');
-  }, [paymentMethod, onlineEnabled, codEnabled]);
+    const enabled: Record<PaymentMethod, boolean> = { razorpay: onlineEnabled, upi: upiEnabled, cod: codEnabled };
+    if (enabled[paymentMethod]) return;
+    const fallback = (['razorpay', 'upi', 'cod'] as const).find((m) => enabled[m]);
+    if (fallback) setPaymentMethod(fallback);
+  }, [paymentMethod, onlineEnabled, codEnabled, upiEnabled]);
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -423,7 +427,8 @@ function CheckoutForm() {
       if (paymentMethod === 'razorpay') {
         await payWithRazorpay();
       } else {
-        await placeOrder({ paymentMethod: 'cod' });
+        // UPI orders are placed unpaid; the confirmation page then shows the QR for the exact total.
+        await placeOrder({ paymentMethod });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unable to place order');
@@ -638,6 +643,23 @@ function CheckoutForm() {
                   Pay Online (Card / UPI / Netbanking)
                 </label>
               )}
+              {upiEnabled && (
+                <label
+                  className={cn(
+                    'flex flex-1 cursor-pointer items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors',
+                    paymentMethod === 'upi' ? 'border-gold bg-secondary/50' : 'border-border',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    className="accent-gold"
+                    checked={paymentMethod === 'upi'}
+                    onChange={() => setPaymentMethod('upi')}
+                  />
+                  Pay by UPI (GPay / PhonePe / Paytm)
+                </label>
+              )}
               {codEnabled && (
                 <label
                   className={cn(
@@ -655,22 +677,30 @@ function CheckoutForm() {
                   Cash on Delivery
                 </label>
               )}
-              {!onlineEnabled && !codEnabled && (
+              {noPaymentMethod && (
                 <p className="text-sm text-destructive">
                   Orders are temporarily unavailable. Please try again later.
                 </p>
               )}
             </div>
+            {paymentMethod === 'upi' && upiEnabled && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                After you place the order, we&apos;ll show a UPI QR code for the exact amount. Pay with any UPI app
+                and enter the transaction ID — your order is confirmed once we verify the payment.
+              </p>
+            )}
           </div>
 
-          <Button type="submit" disabled={submitting || !cityAllowed || (!onlineEnabled && !codEnabled)} className="w-full sm:w-auto">
+          <Button type="submit" disabled={submitting || !cityAllowed || noPaymentMethod} className="w-full sm:w-auto">
             {submitting
               ? paymentMethod === 'razorpay'
                 ? 'Processing payment…'
                 : 'Placing order…'
               : paymentMethod === 'razorpay'
                 ? 'Pay & Place Order'
-                : 'Place Order'}
+                : paymentMethod === 'upi'
+                  ? 'Place Order & Pay by UPI'
+                  : 'Place Order'}
           </Button>
         </form>
 
@@ -762,9 +792,11 @@ function CheckoutForm() {
             </p>
           )}
           <ul className="space-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
-            <li className="flex items-center gap-2">
-              <Lock className="h-3.5 w-3.5 text-gold" /> Payments secured by Razorpay — we never see your card details
-            </li>
+            {onlineEnabled && (
+              <li className="flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5 text-gold" /> Payments secured by Razorpay — we never see your card details
+              </li>
+            )}
             <li className="flex items-center gap-2">
               <ShieldCheck className="h-3.5 w-3.5 text-gold" /> UPI, cards, netbanking &amp; cash on delivery
             </li>

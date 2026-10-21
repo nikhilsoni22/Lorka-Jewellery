@@ -17,7 +17,7 @@ export const FALLBACK_SETTINGS: SettingsResponse = {
   goldRatePer10g: 0,
   charges: [],
   maintenance: { enabled: false, message: '' },
-  paymentMethods: { onlineEnabled: true, codEnabled: true },
+  paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '' },
   storeInfo: EMPTY_STORE_INFO,
   policies: { privacy: '', terms: '', refund: '', shipping: '' },
 };
@@ -30,6 +30,7 @@ export function normalizeSettings(settings: Partial<SettingsResponse> | null | u
   return {
     ...FALLBACK_SETTINGS,
     ...settings,
+    paymentMethods: { ...FALLBACK_SETTINGS.paymentMethods, ...settings?.paymentMethods },
     storeInfo: { ...EMPTY_STORE_INFO, ...settings?.storeInfo },
     policies: { ...FALLBACK_SETTINGS.policies, ...settings?.policies },
   };

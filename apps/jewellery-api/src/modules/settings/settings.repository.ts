@@ -25,6 +25,9 @@ function toEntity(doc: SettingsDocument): SettingsEntity {
     paymentMethods: {
       onlineEnabled: doc.paymentMethods?.onlineEnabled ?? true,
       codEnabled: doc.paymentMethods?.codEnabled ?? true,
+      upiEnabled: doc.paymentMethods?.upiEnabled ?? false,
+      upiId: doc.paymentMethods?.upiId ?? '',
+      upiPayeeName: doc.paymentMethods?.upiPayeeName ?? '',
     },
     notificationEmail: doc.notificationEmail || undefined,
     razorpayKeyId: doc.razorpayKeyId || undefined,
@@ -93,6 +96,9 @@ export class SettingsRepository implements ISettingsRepository {
     doc.set('paymentMethods', {
       onlineEnabled: data.paymentMethods.onlineEnabled,
       codEnabled: data.paymentMethods.codEnabled,
+      upiEnabled: data.paymentMethods.upiEnabled,
+      upiId: data.paymentMethods.upiId,
+      upiPayeeName: data.paymentMethods.upiPayeeName,
     });
     doc.set('notificationEmail', data.notificationEmail ?? '');
     doc.set('razorpayKeyId', data.razorpayKeyId ?? '');

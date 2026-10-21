@@ -25,6 +25,9 @@ const paymentMethodsSchema = new Schema(
   {
     onlineEnabled: { type: Boolean, default: true },
     codEnabled: { type: Boolean, default: true },
+    upiEnabled: { type: Boolean, default: false },
+    upiId: { type: String, default: '' },
+    upiPayeeName: { type: String, default: '' },
   },
   { _id: false },
 );

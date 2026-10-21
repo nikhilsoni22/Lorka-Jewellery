@@ -1,5 +1,6 @@
-import { OrderStatus, type OrderResponse } from '@lorka/types';
+import { OrderStatus, PaymentMethod, PaymentStatus, type OrderResponse } from '@lorka/types';
 import type { AdminPaymentAlert, AdminTicketNotification } from '../common/interfaces/services';
+import { env } from '../config/env';
 
 export interface EmailContent {
   subject: string;
@@ -15,6 +16,17 @@ function mapsNavigationUrl(order: OrderResponse): string {
     ? `${location.lat},${location.lng}`
     : [line1, line2, city, state, postalCode, country].filter(Boolean).join(', ');
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+}
+
+/** The customer's order page — where a UPI order's payment details are (re)entered, too. */
+function trackOrderUrl(order: OrderResponse): string {
+  return `${env.WEBSITE_URL}/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`;
+}
+
+function trackOrderButton(order: OrderResponse, label: string): string {
+  return `<p style="margin:24px 0 0;">
+        <a href="${trackOrderUrl(order)}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:bold;">${label}</a>
+      </p>`;
 }
 
 /** The server runs in UTC, so bare toLocaleString() printed UTC time in US format (month/day).
@@ -130,6 +142,11 @@ function renderOrderConfirmationHtml(
 
       <p style="margin-top:24px;color:#666;font-size:13px;">
         Payment method: ${order.paymentMethod.toUpperCase()} (${order.paymentStatus})
+        ${
+          audience === 'customer' && order.paymentMethod === PaymentMethod.Upi && order.paymentStatus === PaymentStatus.Pending
+            ? `<br />Haven't paid yet? <a href="${trackOrderUrl(order)}">Open your order</a> to pay by UPI and enter the transaction ID — we'll email you as soon as the payment is verified.`
+            : ''
+        }
         ${order.hasBuildItems ? '<br />This order includes made-to-order item(s) — we\'ll confirm the build timeline separately.' : ''}
       </p>
 
@@ -336,6 +353,64 @@ export function adminTicketNotificationEmail(data: AdminTicketNotification): Ema
   return {
     subject: `New support ticket — ${data.ticket.subject} | Lorka Jewellers`,
     html: renderAdminTicketHtml(data),
+  };
+}
+
+export function paymentVerifiedEmail(order: OrderResponse): EmailContent {
+  return {
+    subject: `Payment received — ${order.orderNumber} | Lorka Jewellers`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+        <h1 style="font-size:22px;">Your payment is verified ✅</h1>
+        <p>Hi ${escapeHtml(order.customerName)}, we've received your UPI payment of <strong>₹${order.total}</strong>
+        for order <strong>${order.orderNumber}</strong>. Thank you!</p>
+        ${order.upiReference ? `<p style="color:#666;font-size:13px;">UPI transaction ID: ${escapeHtml(order.upiReference)}</p>` : ''}
+        <p>We're getting your order ready and will let you know as soon as it ships.</p>
+        ${trackOrderButton(order, 'Track your order')}
+        <p style="margin-top:24px;">With love,<br />Lorka Jewellers</p>
+      </div>
+    `,
+  };
+}
+
+export function paymentRejectedEmail(order: OrderResponse, reason: string): EmailContent {
+  return {
+    subject: `We couldn't verify your payment — ${order.orderNumber} | Lorka Jewellers`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+        <h1 style="font-size:22px;">We couldn't verify your payment</h1>
+        <p>Hi ${escapeHtml(order.customerName)}, we couldn't find a UPI payment of <strong>₹${order.total}</strong>
+        for order <strong>${order.orderNumber}</strong>${order.upiReference ? ` with transaction ID ${escapeHtml(order.upiReference)}` : ''}.</p>
+        ${reason ? `<div style="background:#f7f4ef;border-left:3px solid #c9a24a;padding:12px 16px;font-size:14px;">${escapeHtml(reason)}</div>` : ''}
+        <p>If you have paid, please open your order and enter the correct UPI transaction ID (UTR) from your
+        UPI app, or reply to this email and we'll sort it out.</p>
+        ${trackOrderButton(order, 'Open your order')}
+        <p style="margin-top:24px;">With love,<br />Lorka Jewellers</p>
+      </div>
+    `,
+  };
+}
+
+export function adminUpiPaymentSubmittedEmail(order: OrderResponse): EmailContent {
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#666;">${label}</td><td>${value}</td></tr>`;
+  return {
+    subject: `UPI payment to verify — ₹${order.total} — ${order.orderNumber} | Lorka Jewellers`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+        <h1 style="font-size:22px;">A customer says they've paid by UPI</h1>
+        <p>Check your bank / UPI app for this credit. Only once you can see it, open the order in the admin
+        panel and click <strong>Verify payment</strong> — the customer is emailed automatically.</p>
+        <table style="border-collapse:collapse;margin-top:16px;font-size:14px;">
+          ${row('Order', `<strong>${order.orderNumber}</strong>`)}
+          ${row('Amount', `<strong>₹${order.total}</strong>`)}
+          ${row('UPI transaction ID (UTR)', `<strong>${escapeHtml(order.upiReference ?? '')}</strong>`)}
+          ${row('Customer', escapeHtml(order.customerName))}
+          ${row('Phone', `<a href="tel:${escapeHtml(order.customerPhone)}">${escapeHtml(order.customerPhone)}</a>`)}
+        </table>
+        <p style="color:#999;font-size:12px;margin-top:16px;">Never ship on a screenshot or UTR alone — confirm the money is in your account.</p>
+      </div>
+    `,
   };
 }
 

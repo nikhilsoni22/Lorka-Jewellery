@@ -129,6 +129,9 @@ export interface OrderEntity {
   paymentStatus: PaymentStatus;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
+  upiReference?: string;
+  upiSubmittedAt?: Date | null;
+  paymentVerifiedAt?: Date | null;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
@@ -221,6 +224,9 @@ export interface MaintenanceEntity {
 export interface PaymentMethodsEntity {
   onlineEnabled: boolean;
   codEnabled: boolean;
+  upiEnabled: boolean;
+  upiId: string;
+  upiPayeeName: string;
 }
 
 export interface SettingsEntity {

@@ -59,7 +59,13 @@ export default function SettingsPage() {
   const [goldRatePer10g, setGoldRatePer10g] = useState('0');
   const [charges, setCharges] = useState<ChargeRow[]>([]);
   const [maintenance, setMaintenance] = useState({ enabled: false, startAt: '', endAt: '', message: '' });
-  const [paymentMethods, setPaymentMethods] = useState({ onlineEnabled: true, codEnabled: true });
+  const [paymentMethods, setPaymentMethods] = useState({
+    onlineEnabled: true,
+    codEnabled: true,
+    upiEnabled: false,
+    upiId: '',
+    upiPayeeName: '',
+  });
   const [notificationEmail, setNotificationEmail] = useState('');
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
@@ -91,6 +97,9 @@ export default function SettingsPage() {
     setPaymentMethods({
       onlineEnabled: data.paymentMethods?.onlineEnabled ?? true,
       codEnabled: data.paymentMethods?.codEnabled ?? true,
+      upiEnabled: data.paymentMethods?.upiEnabled ?? false,
+      upiId: data.paymentMethods?.upiId ?? '',
+      upiPayeeName: data.paymentMethods?.upiPayeeName ?? '',
     });
     setNotificationEmail(data.notificationEmail ?? '');
     setRazorpayKeyId(data.razorpayKeyId ?? '');
@@ -139,8 +148,17 @@ export default function SettingsPage() {
       return;
     }
 
-    if (!paymentMethods.onlineEnabled && !paymentMethods.codEnabled) {
+    if (!paymentMethods.onlineEnabled && !paymentMethods.codEnabled && !paymentMethods.upiEnabled) {
       toast.error('Keep at least one payment method enabled, or customers cannot place orders');
+      return;
+    }
+    const upiId = paymentMethods.upiId.trim();
+    if (paymentMethods.upiEnabled && !upiId) {
+      toast.error('Add your UPI ID to turn on UPI payments');
+      return;
+    }
+    if (upiId && !/^[\w.-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,64}$/.test(upiId)) {
+      toast.error('Enter a valid UPI ID — e.g. lorka@okaxis');
       return;
     }
 
@@ -161,7 +179,7 @@ export default function SettingsPage() {
           endAt: maintenance.endAt ? new Date(maintenance.endAt) : undefined,
           message: maintenance.message,
         },
-        paymentMethods,
+        paymentMethods: { ...paymentMethods, upiId, upiPayeeName: paymentMethods.upiPayeeName.trim() },
         notificationEmail: notificationEmail.trim() || undefined,
         razorpayKeyId: razorpayKeyId.trim() || undefined,
         razorpayKeySecret: razorpayKeySecret.trim() || undefined,
@@ -369,6 +387,48 @@ export default function SettingsPage() {
             />
             Cash on Delivery
           </label>
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={paymentMethods.upiEnabled}
+              onChange={(e) => setPaymentMethods((m) => ({ ...m, upiEnabled: e.target.checked }))}
+            />
+            UPI to your own UPI ID (no gateway — you verify each payment by hand)
+          </label>
+          {paymentMethods.upiEnabled && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
+              <p className="text-xs text-muted-foreground">
+                After placing the order the customer sees a QR code for the exact amount, pays from any UPI app
+                and enters the transaction ID (UTR). You get an email; check the credit in your bank / UPI app, then
+                open the order and click <strong>Verify payment</strong> — the customer is emailed automatically.
+                A business / merchant UPI ID (PhonePe Business, Paytm Business, BharatPe…) works best.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>UPI ID</Label>
+                  <Input
+                    value={paymentMethods.upiId}
+                    onChange={(e) => setPaymentMethods((m) => ({ ...m, upiId: e.target.value }))}
+                    placeholder="lorka@okaxis"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Payee name</Label>
+                  <Input
+                    value={paymentMethods.upiPayeeName}
+                    onChange={(e) => setPaymentMethods((m) => ({ ...m, upiPayeeName: e.target.value }))}
+                    placeholder="Name on the bank account"
+                  />
+                </div>
+              </div>
+              {!notificationEmail.trim() && (
+                <p className="text-xs text-destructive">
+                  Set a notification email below so you get an email every time a customer enters a UPI
+                  transaction ID.
+                </p>
+              )}
+            </div>
+          )}
           {paymentMethods.onlineEnabled && !razorpayKeyId.trim() && (
             <p className="text-xs text-destructive">
               Online payment is enabled but no Razorpay keys are set below, so it will fail at checkout.

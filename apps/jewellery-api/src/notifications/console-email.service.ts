@@ -60,4 +60,19 @@ export class ConsoleEmailService implements IEmailService {
   async sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void> {
     logger.warn({ to, ...data }, '[email] Admin payment alert (dev — not actually sent)');
   }
+
+  async sendAdminUpiPaymentSubmitted(to: string, order: OrderResponse): Promise<void> {
+    logger.info(
+      { to, orderNumber: order.orderNumber, total: order.total, upiReference: order.upiReference },
+      '[email] Admin UPI payment to verify (dev — not actually sent)',
+    );
+  }
+
+  async sendPaymentVerified(to: string, order: OrderResponse): Promise<void> {
+    logger.info({ to, orderNumber: order.orderNumber }, '[email] Payment verified (dev — not actually sent)');
+  }
+
+  async sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void> {
+    logger.info({ to, orderNumber: order.orderNumber, reason }, '[email] Payment rejected (dev — not actually sent)');
+  }
 }

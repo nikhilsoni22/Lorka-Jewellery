@@ -65,6 +65,22 @@ export function useRefundOrder(id: string) {
   });
 }
 
+/** Manual UPI payments: 'verify' once the money is in the bank, 'reject' if it isn't. Emails the customer. */
+export function useReviewPayment(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { action: 'verify' | 'reject'; reason?: string }): Promise<OrderResponse> => {
+      const { data } = await api.patch<ApiResponse<OrderResponse>>(`/orders/${id}/payment`, input);
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+    },
+  });
+}
+
 export function useSetBuildEta(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

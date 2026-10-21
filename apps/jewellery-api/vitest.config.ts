@@ -16,6 +16,11 @@ export default defineConfig({
       ACCESS_TOKEN_TTL_MIN: '15',
       // Keep Google login disabled in tests even if the local .env enables it.
       FIREBASE_PROJECT_ID: '',
+      // Never send real email from tests, whatever mailer the local .env configures.
+      BREVO_API_KEY: '',
+      RESEND_API_KEY: '',
+      SMTP_USER: '',
+      SMTP_PASS: '',
     },
   },
 });

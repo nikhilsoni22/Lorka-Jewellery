@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Printer } from 'lucide-react';
 import type { OrderResponse, SettingsResponse } from '@lorka/types';
 import { apiClient } from '@/lib/api-client';
 import { useOrderLookup } from '@/lib/use-order-lookup';
-import { trackOrderHref } from '@/lib/order-tracking';
+import { paymentMethodLabel, trackOrderHref } from '@/lib/order-tracking';
 import { EMPTY_STORE_INFO, normalizeSettings } from '@/lib/store-defaults';
 import { OrderNotFound } from '@/components/order-confirmation-view';
 
@@ -93,9 +93,10 @@ export function InvoiceView({ orderNumber, phone }: { orderNumber: string; phone
           </div>
           <div className="sm:text-right">
             <p className="text-xs uppercase tracking-wider text-neutral-500">Payment</p>
-            <p className="mt-2 text-sm">{order.paymentMethod === 'razorpay' ? 'Paid online (Razorpay)' : 'Cash on Delivery'}</p>
+            <p className="mt-2 text-sm">{order.paymentMethod === 'razorpay' ? 'Paid online (Razorpay)' : paymentMethodLabel(order)}</p>
             <p className="text-sm capitalize text-neutral-700">Status: {order.paymentStatus}</p>
             {order.razorpayPaymentId && <p className="text-xs text-neutral-500">Ref: {order.razorpayPaymentId}</p>}
+            {order.upiReference && <p className="text-xs text-neutral-500">UPI ref: {order.upiReference}</p>}
           </div>
         </section>
 

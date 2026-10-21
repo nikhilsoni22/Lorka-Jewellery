@@ -7,6 +7,8 @@ import type {
   checkoutDetailsSchema,
   orderQuerySchema,
   trackOrderQuerySchema,
+  submitUpiPaymentSchema,
+  reviewPaymentSchema,
 } from './order.schemas';
 import type { OrderStatus, PaymentMethod, PaymentStatus } from './order.enums';
 
@@ -17,6 +19,8 @@ export type RefundOrderInput = z.infer<typeof refundOrderSchema>;
 export type CheckoutDetailsInput = z.infer<typeof checkoutDetailsSchema>;
 export type OrderQuery = z.infer<typeof orderQuerySchema>;
 export type TrackOrderQuery = z.infer<typeof trackOrderQuerySchema>;
+export type SubmitUpiPaymentInput = z.infer<typeof submitUpiPaymentSchema>;
+export type ReviewPaymentInput = z.infer<typeof reviewPaymentSchema>;
 
 export interface OrderItemResponse {
   productId: string;
@@ -58,6 +62,11 @@ export interface OrderResponse {
   paymentStatus: PaymentStatus;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
+  /** UPI transaction ID / UTR the customer entered after paying — the admin matches it in the bank. */
+  upiReference?: string;
+  upiSubmittedAt?: string;
+  /** When the admin confirmed a UPI payment reached the account. */
+  paymentVerifiedAt?: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;

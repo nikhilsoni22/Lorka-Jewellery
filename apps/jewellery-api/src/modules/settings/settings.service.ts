@@ -28,6 +28,9 @@ export function toSettingsResponse(
     paymentMethods: {
       onlineEnabled: settings.paymentMethods.onlineEnabled,
       codEnabled: settings.paymentMethods.codEnabled,
+      upiEnabled: settings.paymentMethods.upiEnabled,
+      upiId: settings.paymentMethods.upiId,
+      upiPayeeName: settings.paymentMethods.upiPayeeName,
     },
     storeInfo: settings.storeInfo ?? EMPTY_STORE_INFO,
     policies: settings.policies ?? EMPTY_POLICIES,
@@ -83,6 +86,9 @@ export class SettingsService {
       paymentMethods: {
         onlineEnabled: input.paymentMethods.onlineEnabled ?? true,
         codEnabled: input.paymentMethods.codEnabled ?? true,
+        upiEnabled: input.paymentMethods.upiEnabled ?? false,
+        upiId: input.paymentMethods.upiId ?? '',
+        upiPayeeName: input.paymentMethods.upiPayeeName ?? '',
       },
       notificationEmail: input.notificationEmail,
       razorpayKeyId: input.razorpayKeyId,

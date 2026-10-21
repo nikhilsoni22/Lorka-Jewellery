@@ -60,6 +60,9 @@ export function OrderTable({ orders }: { orders: OrderResponse[] }) {
               <div className="flex items-center gap-1.5">
                 <span className="text-xs capitalize text-muted-foreground">{order.paymentMethod}</span>
                 <Badge variant={PAYMENT_STATUS_VARIANT[order.paymentStatus]}>{order.paymentStatus}</Badge>
+                {order.paymentMethod === 'upi' && order.paymentStatus === 'pending' && order.upiReference && (
+                  <Badge variant="outline">Verify UTR</Badge>
+                )}
               </div>
             </TableCell>
             <TableCell>

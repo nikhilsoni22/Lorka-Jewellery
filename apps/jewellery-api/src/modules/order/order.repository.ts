@@ -1,7 +1,8 @@
-import { OrderStatus, PaymentStatus, type PaymentMethod } from '@lorka/types';
+import { OrderStatus, PaymentMethod, PaymentStatus } from '@lorka/types';
 import type { OrderEntity } from '../../common/interfaces/entities';
 import {
   DuplicateRazorpayOrderError,
+  DuplicateUpiReferenceError,
   type IOrderRepository,
   type OrderFilter,
   type CreateOrderData,
@@ -21,6 +22,9 @@ function toEntity(doc: OrderDocument): OrderEntity {
     paymentStatus: doc.paymentStatus as PaymentStatus,
     razorpayOrderId: doc.razorpayOrderId || undefined,
     razorpayPaymentId: doc.razorpayPaymentId || undefined,
+    upiReference: doc.upiReference || undefined,
+    upiSubmittedAt: doc.upiSubmittedAt ?? null,
+    paymentVerifiedAt: doc.paymentVerifiedAt ?? null,
     customerName: doc.customerName,
     customerPhone: doc.customerPhone,
     customerEmail: doc.customerEmail || undefined,
@@ -117,6 +121,41 @@ export class OrderRepository implements IOrderRepository {
       }
       throw err;
     }
+  }
+
+  async findByUpiReference(upiReference: string): Promise<OrderEntity | null> {
+    const doc = await OrderModel.findOne({ upiReference }).lean<OrderDocument>().exec();
+    return doc ? toEntity(doc) : null;
+  }
+
+  async submitUpiReference(id: string, upiReference: string, from: PaymentStatus[]): Promise<OrderEntity | null> {
+    try {
+      const doc = await OrderModel.findOneAndUpdate(
+        { _id: id, paymentMethod: PaymentMethod.Upi, paymentStatus: { $in: from } },
+        { $set: { upiReference, upiSubmittedAt: new Date(), paymentStatus: PaymentStatus.Pending } },
+        { new: true },
+      )
+        .lean<OrderDocument>()
+        .exec();
+      return doc ? toEntity(doc) : null;
+    } catch (err) {
+      const mongoErr = err as { code?: number; keyPattern?: Record<string, unknown> };
+      if (mongoErr.code === 11000 && mongoErr.keyPattern?.upiReference) {
+        throw new DuplicateUpiReferenceError(upiReference);
+      }
+      throw err;
+    }
+  }
+
+  async setUpiPaymentStatus(id: string, from: PaymentStatus[], to: PaymentStatus): Promise<OrderEntity | null> {
+    const doc = await OrderModel.findOneAndUpdate(
+      { _id: id, paymentMethod: PaymentMethod.Upi, paymentStatus: { $in: from } },
+      { $set: { paymentStatus: to, paymentVerifiedAt: to === PaymentStatus.Paid ? new Date() : null } },
+      { new: true },
+    )
+      .lean<OrderDocument>()
+      .exec();
+    return doc ? toEntity(doc) : null;
   }
 
   async recordRefund(id: string, amount: number, fullyRefunded: boolean): Promise<OrderEntity | null> {

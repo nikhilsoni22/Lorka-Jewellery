@@ -9,7 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useOrder, useUpdateOrderStatus, useSetBuildEta, useRefundOrder } from '@/lib/hooks/orders';
+import {
+  useOrder,
+  useUpdateOrderStatus,
+  useSetBuildEta,
+  useRefundOrder,
+  useReviewPayment,
+} from '@/lib/hooks/orders';
 import { extractMessage } from '@/lib/api-utils';
 
 const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as OrderStatus[];
@@ -35,6 +41,7 @@ export default function OrderDetailPage() {
   const updateStatus = useUpdateOrderStatus(params.id);
   const setBuildEta = useSetBuildEta(params.id);
   const refund = useRefundOrder(params.id);
+  const reviewPayment = useReviewPayment(params.id);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | ''>('');
   const [buildEtaInput, setBuildEtaInput] = useState('');
   const [refundInput, setRefundInput] = useState('');
@@ -88,6 +95,40 @@ export default function OrderDetailPage() {
       },
       onError: (err) => toast.error(extractMessage(err, 'Unable to refund this payment')),
     });
+  };
+
+  const isUpi = order.paymentMethod === 'upi';
+  const canReviewUpi = isUpi && order.status !== 'cancelled' && order.paymentStatus !== 'paid' && order.paymentStatus !== 'refunded';
+
+  const handleVerifyPayment = () => {
+    if (
+      !window.confirm(
+        `Have you checked your bank / UPI app and received ₹${order.total}${order.upiReference ? ` with UTR ${order.upiReference}` : ''}? The customer will be emailed that their payment is verified.`,
+      )
+    )
+      return;
+    reviewPayment.mutate(
+      { action: 'verify' },
+      {
+        onSuccess: () => toast.success('Payment verified — customer emailed'),
+        onError: (err) => toast.error(extractMessage(err, 'Unable to verify this payment')),
+      },
+    );
+  };
+
+  const handleRejectPayment = () => {
+    const reason = window.prompt(
+      'Why could the payment not be verified? This is included in the email to the customer (optional).',
+      'We could not find this payment in our account.',
+    );
+    if (reason === null) return;
+    reviewPayment.mutate(
+      { action: 'reject', reason },
+      {
+        onSuccess: () => toast.success('Payment marked as not received — customer emailed'),
+        onError: (err) => toast.error(extractMessage(err, 'Unable to reject this payment')),
+      },
+    );
   };
 
   const address = order.shippingAddress;
@@ -208,13 +249,49 @@ export default function OrderDetailPage() {
           <div className="rounded-lg border border-border p-4">
             <p className="text-sm font-medium">Payment</p>
             <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="capitalize">{order.paymentMethod}</span>
+              <span className={isUpi ? 'uppercase' : 'capitalize'}>{order.paymentMethod}</span>
               <Badge variant={PAYMENT_STATUS_VARIANT[order.paymentStatus]}>{order.paymentStatus}</Badge>
             </div>
             {order.razorpayPaymentId && (
               <p className="mt-2 break-all text-xs text-muted-foreground">
                 Payment ID: {order.razorpayPaymentId}
               </p>
+            )}
+            {isUpi && (
+              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {order.upiReference ? (
+                  <p className="break-all">
+                    UTR: <span className="font-mono text-sm font-medium text-foreground">{order.upiReference}</span>
+                    {order.upiSubmittedAt && ` · entered ${new Date(order.upiSubmittedAt).toLocaleString()}`}
+                  </p>
+                ) : (
+                  order.paymentStatus === 'pending' && <p>Customer hasn&apos;t entered a UPI transaction ID yet.</p>
+                )}
+                {order.paymentVerifiedAt && <p>Verified on {new Date(order.paymentVerifiedAt).toLocaleString()}</p>}
+                {order.paymentStatus === 'failed' && (
+                  <p className="text-destructive">Marked as not received — the customer can enter a new UTR.</p>
+                )}
+              </div>
+            )}
+            {canReviewUpi && (
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-sm font-medium">Verify UPI payment</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Check your bank / UPI app for a credit of ₹{order.total}
+                  {order.upiReference ? ' with this UTR' : ''} before verifying. Never go by a screenshot alone.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Button onClick={handleVerifyPayment} disabled={reviewPayment.isPending}>
+                    {reviewPayment.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Verify payment
+                  </Button>
+                  {order.paymentStatus === 'pending' && (
+                    <Button variant="outline" onClick={handleRejectPayment} disabled={reviewPayment.isPending}>
+                      Not received
+                    </Button>
+                  )}
+                </div>
+              </div>
             )}
             {order.refundedAmount > 0 && (
               <p className="mt-2 text-sm text-sky-700">

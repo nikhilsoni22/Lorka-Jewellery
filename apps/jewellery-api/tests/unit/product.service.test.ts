@@ -179,7 +179,7 @@ describe('live silver/gold pricing', () => {
       goldRatePer10g: 70000,
       charges: [],
       maintenance: { enabled: false, message: '' },
-      paymentMethods: { onlineEnabled: true, codEnabled: true },
+      paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '' },
     });
 
     const repriced = await productService.getById(product.id);

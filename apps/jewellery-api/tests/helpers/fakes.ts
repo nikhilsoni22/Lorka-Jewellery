@@ -184,6 +184,9 @@ export class FakeEmailService implements IEmailService {
   readonly statusUpdates: { to: string; order: OrderResponse }[] = [];
   readonly ticketNotifications: { to: string; data: AdminTicketNotification }[] = [];
   readonly paymentAlerts: { to: string; data: AdminPaymentAlert }[] = [];
+  readonly upiSubmissions: { to: string; order: OrderResponse }[] = [];
+  readonly paymentsVerified: { to: string; order: OrderResponse }[] = [];
+  readonly paymentsRejected: { to: string; order: OrderResponse; reason: string }[] = [];
 
   async sendPasswordReset(to: string, resetUrl: string): Promise<void> {
     this.sent.push({ to, resetUrl });
@@ -215,5 +218,17 @@ export class FakeEmailService implements IEmailService {
 
   async sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void> {
     this.paymentAlerts.push({ to, data });
+  }
+
+  async sendAdminUpiPaymentSubmitted(to: string, order: OrderResponse): Promise<void> {
+    this.upiSubmissions.push({ to, order });
+  }
+
+  async sendPaymentVerified(to: string, order: OrderResponse): Promise<void> {
+    this.paymentsVerified.push({ to, order });
+  }
+
+  async sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void> {
+    this.paymentsRejected.push({ to, order, reason });
   }
 }

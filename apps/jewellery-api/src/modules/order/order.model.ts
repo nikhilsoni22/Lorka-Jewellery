@@ -75,6 +75,9 @@ const orderSchema = new Schema(
     },
     razorpayOrderId: { type: String, default: '' },
     razorpayPaymentId: { type: String, default: '' },
+    upiReference: { type: String, default: '' },
+    upiSubmittedAt: { type: Date, default: null },
+    paymentVerifiedAt: { type: Date, default: null },
     customerName: { type: String, required: true, trim: true },
     customerPhone: { type: String, required: true, trim: true, index: true },
     customerEmail: { type: String, default: '' },
@@ -100,6 +103,12 @@ const orderSchema = new Schema(
 orderSchema.index(
   { razorpayOrderId: 1 },
   { unique: true, partialFilterExpression: { razorpayOrderId: { $type: 'string', $gt: '' } } },
+);
+
+// A UTR identifies exactly one bank transfer, so it can only ever pay for one order.
+orderSchema.index(
+  { upiReference: 1 },
+  { unique: true, partialFilterExpression: { upiReference: { $type: 'string', $gt: '' } } },
 );
 
 export type OrderDocument = InferSchemaType<typeof orderSchema> & {

@@ -1,6 +1,7 @@
 import type {
   UserRole,
   OrderStatus,
+  PaymentStatus,
   TicketStatus,
   ChargeType,
   MetalType,
@@ -185,6 +186,15 @@ export interface IOrderRepository {
   create(data: CreateOrderData): Promise<OrderEntity>;
   updateStatus(id: string, status: OrderStatus): Promise<OrderEntity | null>;
   setBuildEta(id: string, estimatedReadyDate: Date): Promise<OrderEntity | null>;
+  findByUpiReference(upiReference: string): Promise<OrderEntity | null>;
+  /**
+   * Saves the customer's UTR on a UPI order whose payment is still `from` one of the given
+   * statuses, and puts it (back) to pending verification. Null if the order isn't in that state.
+   * Throws `DuplicateUpiReferenceError` if another order already has this UTR.
+   */
+  submitUpiReference(id: string, upiReference: string, from: PaymentStatus[]): Promise<OrderEntity | null>;
+  /** Moves a UPI order's payment from one of `from` to `to` (the admin's verify / reject). */
+  setUpiPaymentStatus(id: string, from: PaymentStatus[], to: PaymentStatus): Promise<OrderEntity | null>;
   /** Adds `amount` to the refunded total; `fullyRefunded` flips paymentStatus to refunded. */
   recordRefund(id: string, amount: number, fullyRefunded: boolean): Promise<OrderEntity | null>;
   /** Whether the user has a delivered order containing this product (verified-buyer reviews). */
@@ -195,6 +205,13 @@ export interface IOrderRepository {
 export class DuplicateRazorpayOrderError extends Error {
   constructor(readonly razorpayOrderId: string) {
     super(`An order already exists for Razorpay order ${razorpayOrderId}`);
+  }
+}
+
+/** Thrown by `IOrderRepository.submitUpiReference` when the UTR already paid for another order. */
+export class DuplicateUpiReferenceError extends Error {
+  constructor(readonly upiReference: string) {
+    super(`UPI reference ${upiReference} is already used by another order`);
   }
 }
 

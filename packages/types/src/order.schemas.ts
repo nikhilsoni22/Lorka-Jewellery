@@ -85,6 +85,27 @@ export const createOrderSchema = checkoutDetailsSchema
     }
   });
 
+/** The reference a UPI app shows for a payment — "UTR" / "UPI Ref No." (12 digits on most apps). */
+export const upiReferenceSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9]{6,35}$/, 'Enter the UPI transaction ID / UTR exactly as shown in your UPI app');
+
+/** Customer → us, after paying a UPI order. Located by orderNumber + phone, like order tracking. */
+export const submitUpiPaymentSchema = z.object({
+  orderNumber: z.string().trim().min(1),
+  phone: z.string().trim().min(1),
+  upiReference: upiReferenceSchema,
+});
+
+/** Admin's decision on a manual (UPI) payment after checking the bank account. */
+export const reviewPaymentSchema = z.object({
+  action: z.enum(['verify', 'reject']),
+  /** Shown to the customer in the rejection email. */
+  reason: z.string().trim().max(300).optional().default(''),
+});
+
 export const updateOrderStatusSchema = z.object({
   status: z.nativeEnum(OrderStatus),
 });

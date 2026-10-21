@@ -11,6 +11,9 @@ import {
   orderStatusUpdateEmail,
   adminTicketNotificationEmail,
   adminPaymentAlertEmail,
+  adminUpiPaymentSubmittedEmail,
+  paymentVerifiedEmail,
+  paymentRejectedEmail,
 } from './email-templates';
 
 /** Sends email over Brevo's HTTPS API (port 443, never blocked by hosts like Render). Brevo only
@@ -67,6 +70,21 @@ export class BrevoEmailService implements IEmailService {
 
   async sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void> {
     const { subject, html } = adminPaymentAlertEmail(data);
+    await this.send(to, subject, html);
+  }
+
+  async sendAdminUpiPaymentSubmitted(to: string, order: OrderResponse): Promise<void> {
+    const { subject, html } = adminUpiPaymentSubmittedEmail(order);
+    await this.send(to, subject, html);
+  }
+
+  async sendPaymentVerified(to: string, order: OrderResponse): Promise<void> {
+    const { subject, html } = paymentVerifiedEmail(order);
+    await this.send(to, subject, html);
+  }
+
+  async sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void> {
+    const { subject, html } = paymentRejectedEmail(order, reason);
     await this.send(to, subject, html);
   }
 

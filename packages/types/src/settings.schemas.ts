@@ -36,10 +36,29 @@ export const maintenanceInputSchema = z
     }
   });
 
-export const paymentMethodsInputSchema = z.object({
-  onlineEnabled: z.boolean().optional().default(true),
-  codEnabled: z.boolean().optional().default(true),
-});
+export const paymentMethodsInputSchema = z
+  .object({
+    onlineEnabled: z.boolean().optional().default(true),
+    codEnabled: z.boolean().optional().default(true),
+    upiEnabled: z.boolean().optional().default(false),
+    upiId: z
+      .string()
+      .trim()
+      .regex(/^[\w.-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,64}$/, 'Enter a valid UPI ID — e.g. lorka@okaxis')
+      .or(z.literal(''))
+      .optional()
+      .default(''),
+    upiPayeeName: z.string().trim().max(60).optional().default(''),
+  })
+  .superRefine((data, ctx) => {
+    if (data.upiEnabled && !data.upiId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['upiId'],
+        message: 'Add your UPI ID to turn on UPI payments',
+      });
+    }
+  });
 
 const optionalUrl = z.string().trim().url('Must be a full link starting with https://').max(300).or(z.literal(''));
 

@@ -6,10 +6,13 @@ import type {
   OrderQuery,
   OrderResponse,
   RefundOrderInput,
+  ReviewPaymentInput,
+  SubmitUpiPaymentInput,
 } from '@lorka/types';
 import type { OrderEntity } from '../../common/interfaces/entities';
 import {
   DuplicateRazorpayOrderError,
+  DuplicateUpiReferenceError,
   type IOrderRepository,
   type IProductRepository,
   type IUserRepository,
@@ -49,6 +52,9 @@ export function toOrderResponse(order: OrderEntity): OrderResponse {
     paymentStatus: order.paymentStatus,
     razorpayOrderId: order.razorpayOrderId,
     razorpayPaymentId: order.razorpayPaymentId,
+    upiReference: order.upiReference,
+    upiSubmittedAt: order.upiSubmittedAt ? order.upiSubmittedAt.toISOString() : undefined,
+    paymentVerifiedAt: order.paymentVerifiedAt ? order.paymentVerifiedAt.toISOString() : undefined,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     customerEmail: order.customerEmail,
@@ -90,6 +96,13 @@ export class OrderService {
     if (method === PaymentMethod.Cod && !settings.paymentMethods.codEnabled) {
       throw AppError.badRequest('Cash on delivery is currently unavailable. Please choose another payment method.');
     }
+    if (method === PaymentMethod.Upi) {
+      if (!settings.paymentMethods.upiEnabled || !settings.paymentMethods.upiId) {
+        throw AppError.badRequest('UPI payment is currently unavailable. Please choose another payment method.');
+      }
+      // Placed unpaid; the customer pays the exact order total next and submits the UTR.
+      return this.place(input, userId, PaymentMethod.Upi);
+    }
     if (method === PaymentMethod.Razorpay) {
       const valid =
         input.razorpayOrderId &&
@@ -103,9 +116,12 @@ export class OrderService {
           settings.razorpayKeySecret,
         );
       if (!valid) throw AppError.badRequest('Payment verification failed');
-      return this.place(input, userId, { razorpayOrderId: input.razorpayOrderId!, razorpayPaymentId: input.razorpayPaymentId! });
+      return this.place(input, userId, PaymentMethod.Razorpay, {
+        razorpayOrderId: input.razorpayOrderId!,
+        razorpayPaymentId: input.razorpayPaymentId!,
+      });
     }
-    return this.place(input, userId);
+    return this.place(input, userId, PaymentMethod.Cod);
   }
 
   /**
@@ -117,12 +133,14 @@ export class OrderService {
     userId: string | null,
     payment: { razorpayOrderId: string; razorpayPaymentId: string },
   ): Promise<OrderResponse> {
-    return this.place(input, userId ?? undefined, payment);
+    return this.place(input, userId ?? undefined, PaymentMethod.Razorpay, payment);
   }
 
+  /** `payment` is only passed for an order already paid through Razorpay. */
   private async place(
     input: CheckoutDetailsInput,
     userId: string | undefined,
+    method: PaymentMethod,
     payment?: { razorpayOrderId: string; razorpayPaymentId: string },
   ): Promise<OrderResponse> {
     const paid = Boolean(payment);
@@ -164,7 +182,7 @@ export class OrderService {
         userId: userId ?? null,
         status: OrderStatus.Pending,
         statusHistory: [{ status: OrderStatus.Pending, at: new Date() }],
-        paymentMethod: paid ? PaymentMethod.Razorpay : PaymentMethod.Cod,
+        paymentMethod: method,
         paymentStatus: paid ? PaymentStatus.Paid : PaymentStatus.Pending,
         razorpayOrderId: payment?.razorpayOrderId,
         razorpayPaymentId: payment?.razorpayPaymentId,
@@ -199,6 +217,73 @@ export class OrderService {
     if (warnings.length) {
       logger.warn({ orderNumber: response.orderNumber, warnings }, '[order] Paid order placed with problems');
     }
+    return response;
+  }
+
+  /**
+   * Customer → us, after paying a UPI order from their UPI app: records the UTR so the admin can
+   * match it in the bank. Can be resubmitted (to fix a typo) until the admin verifies the payment.
+   */
+  async submitUpiPayment(input: SubmitUpiPaymentInput): Promise<OrderResponse> {
+    const order = await this.orders.findByOrderNumberAndPhone(input.orderNumber, input.phone);
+    if (!order) throw AppError.notFound('Order not found');
+    if (order.paymentMethod !== PaymentMethod.Upi) {
+      throw AppError.badRequest('This order is not a UPI payment order');
+    }
+    if (order.status === OrderStatus.Cancelled) throw AppError.badRequest('This order has been cancelled');
+    if (order.paymentStatus === PaymentStatus.Paid) {
+      throw AppError.badRequest('The payment for this order has already been verified');
+    }
+    if (order.upiReference === input.upiReference && order.paymentStatus === PaymentStatus.Pending) {
+      return toOrderResponse(order);
+    }
+
+    let updated: OrderEntity | null;
+    try {
+      updated = await this.orders.submitUpiReference(order.id, input.upiReference, [
+        PaymentStatus.Pending,
+        PaymentStatus.Failed,
+      ]);
+    } catch (err) {
+      if (err instanceof DuplicateUpiReferenceError) {
+        throw AppError.conflict('This UPI transaction ID has already been used for another order');
+      }
+      throw err;
+    }
+    // Verified (or cancelled) by the admin in the moment since we read it.
+    if (!updated) throw AppError.conflict('This order can no longer accept a payment reference');
+
+    const response = toOrderResponse(updated);
+    const { notificationEmail } = await this.settingsRepo.get();
+    if (notificationEmail) {
+      void this.email
+        .sendAdminUpiPaymentSubmitted(notificationEmail, response)
+        .catch((err) => logger.error({ err, orderNumber: response.orderNumber }, '[order] Failed to send UPI payment alert'));
+    }
+    return response;
+  }
+
+  /** Admin → verify (money is in the account) or reject a UPI payment; the customer is emailed either way. */
+  async reviewPayment(id: string, input: ReviewPaymentInput): Promise<OrderResponse> {
+    const order = await this.orders.findById(id);
+    if (!order) throw AppError.notFound('Order not found');
+    if (order.paymentMethod !== PaymentMethod.Upi) {
+      throw AppError.badRequest('Only UPI payments are verified by hand');
+    }
+    if (order.status === OrderStatus.Cancelled) throw AppError.badRequest('This order has been cancelled');
+
+    const verify = input.action === 'verify';
+    // A rejected payment can still be verified later (e.g. the credit showed up late).
+    const from = verify ? [PaymentStatus.Pending, PaymentStatus.Failed] : [PaymentStatus.Pending];
+    const updated = await this.orders.setUpiPaymentStatus(id, from, verify ? PaymentStatus.Paid : PaymentStatus.Failed);
+    if (!updated) {
+      throw AppError.conflict(
+        verify ? 'This payment has already been verified' : 'Only a payment awaiting verification can be rejected',
+      );
+    }
+
+    const response = toOrderResponse(updated);
+    void this.sendPaymentReviewEmail(response, updated.userId, verify, input.reason ?? '');
     return response;
   }
 
@@ -327,6 +412,23 @@ export class OrderService {
       await this.email.sendBuildEtaUpdate(recipient, order);
     } catch (err) {
       logger.error({ err, orderNumber: order.orderNumber }, '[order] Failed to send build ETA email');
+    }
+  }
+
+  /** Best-effort: tells the customer the admin verified (or couldn't find) their UPI payment. */
+  private async sendPaymentReviewEmail(
+    order: OrderResponse,
+    userId: string | null | undefined,
+    verified: boolean,
+    reason: string,
+  ): Promise<void> {
+    try {
+      const recipient = await this.resolveRecipient(order, userId ?? undefined);
+      if (!recipient) return;
+      if (verified) await this.email.sendPaymentVerified(recipient, order);
+      else await this.email.sendPaymentRejected(recipient, order, reason);
+    } catch (err) {
+      logger.error({ err, orderNumber: order.orderNumber }, '[order] Failed to send payment review email');
     }
   }
 

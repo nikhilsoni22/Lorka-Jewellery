@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import type { OrderResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
-import { trackOrderHref } from '@/lib/order-tracking';
+import { UpiPaymentPanel } from '@/components/upi-payment-panel';
+import { paymentMethodLabel, trackOrderHref } from '@/lib/order-tracking';
 import { useOrderLookup } from '@/lib/use-order-lookup';
 
 export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: string; phone: string }) {
@@ -42,8 +43,11 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
         <h1 className="text-3xl">Thank you, {order.customerName}!</h1>
         <p className="mt-3 text-muted-foreground">
           Your order <span className="font-medium text-foreground">{order.orderNumber}</span> has been placed.
+          {order.paymentMethod === 'upi' && order.paymentStatus !== 'paid' && ' Complete the UPI payment below to confirm it.'}
         </p>
       </div>
+
+      <UpiPaymentPanel order={order} onUpdated={setOrder} className="mt-8" />
 
       {order.hasBuildItems && (
         <div className="mt-8 rounded-xl border border-gold/30 bg-secondary/40 p-5 text-center">
@@ -91,10 +95,8 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
           <span>₹{order.total}</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Payment:{' '}
-          {order.paymentMethod === 'razorpay'
-            ? `Paid online${order.razorpayPaymentId ? ` (${order.razorpayPaymentId})` : ''}`
-            : 'Cash on Delivery'}
+          Payment: {paymentMethodLabel(order)}
+          {order.razorpayPaymentId && ` (${order.razorpayPaymentId})`}
         </p>
         {order.giftWrap && (
           <p className="text-sm text-muted-foreground">

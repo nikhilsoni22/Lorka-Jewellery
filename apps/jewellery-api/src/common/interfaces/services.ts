@@ -29,6 +29,12 @@ export interface IEmailService {
   sendOrderStatusUpdate(to: string, order: OrderResponse): Promise<void>;
   sendAdminTicketNotification(to: string, data: AdminTicketNotification): Promise<void>;
   sendAdminPaymentAlert(to: string, data: AdminPaymentAlert): Promise<void>;
+  /** The customer entered a UTR for a UPI order — the admin should check the bank and verify it. */
+  sendAdminUpiPaymentSubmitted(to: string, order: OrderResponse): Promise<void>;
+  /** Admin confirmed the customer's UPI payment reached the account. */
+  sendPaymentVerified(to: string, order: OrderResponse): Promise<void>;
+  /** Admin couldn't find the customer's UPI payment; `reason` is optional free text from the admin. */
+  sendPaymentRejected(to: string, order: OrderResponse, reason: string): Promise<void>;
 }
 
 /** A Google account proven by a verified Firebase ID token. */

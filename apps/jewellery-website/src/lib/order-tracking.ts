@@ -97,6 +97,13 @@ export const STATUS_COPY: Record<Status, { title: string; message: string; updat
   },
 };
 
+/** How the customer is paying, in words — shared by the confirmation, tracking and invoice pages. */
+export function paymentMethodLabel(order: Pick<OrderResponse, 'paymentMethod' | 'paymentStatus'>): string {
+  if (order.paymentMethod === 'razorpay') return 'Paid online';
+  if (order.paymentMethod === 'cod') return 'Cash on Delivery';
+  return order.paymentStatus === 'paid' || order.paymentStatus === 'refunded' ? 'Paid by UPI' : 'UPI';
+}
+
 export function trackOrderHref(order: Pick<OrderResponse, 'orderNumber' | 'customerPhone'>) {
   return `/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}&phone=${encodeURIComponent(order.customerPhone)}`;
 }
