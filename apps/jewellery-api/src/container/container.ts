@@ -110,7 +110,7 @@ export function buildContainer(): AppContainer {
   const auditLogService = new AuditLogService(auditLogRepository);
 
   // Domain services
-  const userService = new UserService(userRepository);
+  const userService = new UserService(userRepository, auditLogService);
   const authService = new AuthService(
     userRepository,
     refreshTokenRepository,

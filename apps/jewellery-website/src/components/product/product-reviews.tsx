@@ -24,7 +24,7 @@ export function ProductReviews({
 }) {
   const [data, setData] = useState(initial);
   const [writing, setWriting] = useState(false);
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const { summary, reviews } = data;
 
   const refresh = async () => {
@@ -40,6 +40,7 @@ export function ProductReviews({
           <h2 className="mt-2 text-2xl md:text-3xl">What customers say</h2>
         </div>
         {!writing &&
+          !user?.isBlocked &&
           (status === 'authenticated' ? (
             <button
               type="button"

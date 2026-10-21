@@ -26,6 +26,7 @@ import { refundRazorpayPayment, verifyRazorpaySignature } from '../payment/razor
 import { logger } from '../../common/logger/logger';
 import type { CouponService } from '../coupon/coupon.service';
 import type { CheckoutPricer } from './checkout-pricer';
+import { assertNotBlocked } from '../users/user.service';
 
 /**
  * Orders placed before status history was recorded have an empty (or partial) history, so
@@ -91,6 +92,7 @@ export class OrderService {
 
   /** Order placed from the checkout page — COD, or online after Razorpay's checkout succeeded. */
   async create(input: CreateOrderInput, userId?: string): Promise<OrderResponse> {
+    await this.assertCanOrder(userId);
     const settings = await this.settingsRepo.get();
     const method = input.paymentMethod ?? PaymentMethod.Cod;
 
@@ -123,6 +125,11 @@ export class OrderService {
       });
     }
     return this.place(input, userId, PaymentMethod.Cod);
+  }
+
+  /** Blocked customers can't order — checked before taking any money, too (PaymentService). */
+  async assertCanOrder(userId: string | undefined): Promise<void> {
+    await assertNotBlocked(this.users, userId);
   }
 
   /**

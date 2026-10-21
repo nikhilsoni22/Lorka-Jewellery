@@ -19,6 +19,8 @@ export interface UserEntity {
   passwordHash: string;
   role: UserRole;
   isBlocked: boolean;
+  blockedReason?: string;
+  blockedAt?: Date | null;
   emailVerified: boolean;
   resetTokenHash?: string | null;
   resetTokenExpires?: Date | null;

@@ -12,7 +12,9 @@ export type AuditAction =
   | 'auth.logout'
   | 'auth.refresh'
   | 'auth.password.reset'
-  | 'auth.email.verified';
+  | 'auth.email.verified'
+  | 'user.blocked'
+  | 'user.unblocked';
 
 export interface AuditContext {
   actorId?: string | null;

@@ -14,6 +14,7 @@ import {
   type SettingsResponse,
 } from '@lorka/types';
 import { Button } from '@/components/ui/button';
+import { BlockedAccountNotice } from '@/components/blocked-account-notice';
 import { useCart, type CartItem } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
@@ -443,6 +444,15 @@ function CheckoutForm() {
         <div className="flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
+      </main>
+    );
+  }
+
+  if (user?.isBlocked) {
+    return (
+      <main className="container max-w-xl py-20">
+        <h1 className="text-3xl">Checkout</h1>
+        <BlockedAccountNotice reason={user.blockedReason} className="mt-8" />
       </main>
     );
   }

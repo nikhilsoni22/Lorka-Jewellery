@@ -14,6 +14,7 @@ import type {
   Pagination,
 } from '../../common/interfaces/repositories';
 import { AppError } from '../../common/errors/app-error';
+import { BLOCKED_ACCOUNT_MESSAGE, assertNotBlocked } from '../users/user.service';
 
 function toReviewResponse(review: ReviewEntity, productName = ''): ReviewResponse {
   return {
@@ -54,11 +55,16 @@ export class ReviewService {
     return { summary, reviews: result.items.map((r) => toReviewResponse(r)) };
   }
 
+  async assertCanReview(userId: string): Promise<void> {
+    await assertNotBlocked(this.users, userId);
+  }
+
   async create(productId: string, userId: string, input: CreateReviewInput): Promise<ReviewResponse> {
     const product = await this.products.findById(productId);
     if (!product || !product.isActive) throw AppError.notFound('Product not found');
     const user = await this.users.findById(userId);
     if (!user) throw AppError.notFound('User not found');
+    if (user.isBlocked) throw AppError.forbidden(BLOCKED_ACCOUNT_MESSAGE);
     if (await this.reviews.findByUserAndProduct(userId, productId)) {
       throw AppError.conflict('You have already reviewed this product');
     }

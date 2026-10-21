@@ -8,6 +8,8 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true },
     role: { type: String, enum: USER_ROLES, default: UserRole.Customer, index: true },
     isBlocked: { type: Boolean, default: false },
+    blockedReason: { type: String, default: '' },
+    blockedAt: { type: Date, default: null },
     emailVerified: { type: Boolean, default: false },
     resetTokenHash: { type: String, default: null },
     resetTokenExpires: { type: Date, default: null },

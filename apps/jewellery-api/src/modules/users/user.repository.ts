@@ -16,6 +16,8 @@ function toEntity(doc: UserDocument): UserEntity {
     passwordHash: doc.passwordHash,
     role: doc.role,
     isBlocked: doc.isBlocked,
+    blockedReason: doc.blockedReason || undefined,
+    blockedAt: doc.blockedAt ?? null,
     emailVerified: doc.emailVerified,
     resetTokenHash: doc.resetTokenHash,
     resetTokenExpires: doc.resetTokenExpires,
@@ -52,6 +54,17 @@ export class UserRepository implements IUserRepository {
 
   async findById(id: string): Promise<UserEntity | null> {
     const doc = await UserModel.findById(id).lean<UserDocument>().exec();
+    return doc ? toEntity(doc) : null;
+  }
+
+  async setBlocked(userId: string, blocked: boolean, reason: string): Promise<UserEntity | null> {
+    const doc = await UserModel.findByIdAndUpdate(
+      userId,
+      { isBlocked: blocked, blockedReason: blocked ? reason : '', blockedAt: blocked ? new Date() : null },
+      { new: true },
+    )
+      .lean<UserDocument>()
+      .exec();
     return doc ? toEntity(doc) : null;
   }
 

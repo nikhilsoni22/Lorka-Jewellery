@@ -25,6 +25,9 @@ export interface PublicUser {
   email: string;
   role: UserRole;
   emailVerified: boolean;
+  /** Blocked customers can still sign in and raise support tickets, but can't order or review. */
+  isBlocked: boolean;
+  blockedReason?: string;
   createdAt: string;
 }
 

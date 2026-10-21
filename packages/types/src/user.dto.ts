@@ -1,8 +1,9 @@
 import type { z } from 'zod';
-import type { userQuerySchema } from './user.schemas';
+import type { userQuerySchema, setUserBlockedSchema } from './user.schemas';
 import type { UserRole } from './enums';
 
 export type UserQuery = z.infer<typeof userQuerySchema>;
+export type SetUserBlockedInput = z.infer<typeof setUserBlockedSchema>;
 
 /** Admin-facing view of a registered user — never includes password/token hashes. */
 export interface AdminUserResponse {
@@ -11,6 +12,9 @@ export interface AdminUserResponse {
   email: string;
   role: UserRole;
   isBlocked: boolean;
+  /** Admin's note on why — also shown to the customer. */
+  blockedReason?: string;
+  blockedAt?: string;
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;

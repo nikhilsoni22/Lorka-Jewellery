@@ -37,6 +37,14 @@ export type GoogleLoginOutcome =
   | { kind: 'session'; issued: SessionIssue; isNewUser: boolean }
   | { kind: 'needs_name'; email: string; suggestedName: string };
 
+/**
+ * A blocked customer keeps signing in — they must still be able to raise a support ticket — and is
+ * stopped at ordering / reviewing instead (see assertNotBlocked). A blocked staff account is out.
+ */
+function isLockedOut(user: UserEntity): boolean {
+  return user.isBlocked && user.role !== UserRole.Customer;
+}
+
 export class AuthService {
   constructor(
     private readonly users: IUserRepository,
@@ -104,7 +112,7 @@ export class AuthService {
 
     const existing = await this.users.findByEmail(identity.email);
     if (existing) {
-      if (existing.isBlocked) throw AppError.forbidden('Your account has been blocked');
+      if (isLockedOut(existing)) throw AppError.forbidden('Your account has been blocked');
       // Google has proven they own this inbox, so a pending email OTP is no longer needed.
       if (!existing.emailVerified) {
         await this.users.markEmailVerified(existing.id);
@@ -143,7 +151,7 @@ export class AuthService {
     if (!existing) throw AppError.unauthorized('Invalid or expired refresh token');
 
     const user = await this.users.findById(existing.userId);
-    if (!user || user.isBlocked) throw AppError.unauthorized('Account is unavailable');
+    if (!user || isLockedOut(user)) throw AppError.unauthorized('Account is unavailable');
 
     // Rotate: issue a new token that inherits the original expiry (caps total session length),
     // then revoke the old one and link it to its replacement.
@@ -177,7 +185,7 @@ export class AuthService {
   async forgotPassword(email: string, ctx: RequestContext): Promise<void> {
     const user = await this.users.findByEmail(email);
     // Respond identically whether or not the account exists (no user enumeration).
-    if (!user || user.isBlocked) return;
+    if (!user || isLockedOut(user)) return;
 
     const { raw, hash } = generateResetToken();
     const expiresAt = new Date(Date.now() + env.RESET_TOKEN_TTL_MIN * 60_000);
@@ -247,7 +255,7 @@ export class AuthService {
       await this.audit.record(`${action}.failed` as const, this.auditCtx(ctx, user?.id, { email }));
       throw AppError.unauthorized('Invalid email or password');
     }
-    if (user.isBlocked) throw AppError.forbidden('Your account has been blocked');
+    if (isLockedOut(user)) throw AppError.forbidden('Your account has been blocked');
     return user;
   }
 

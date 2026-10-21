@@ -39,6 +39,13 @@ export class FakeUserRepository implements IUserRepository {
     return this.byId.get(id) ?? null;
   }
 
+  async setBlocked(userId: string, blocked: boolean, reason: string): Promise<UserEntity | null> {
+    const user = this.byId.get(userId);
+    if (!user) return null;
+    Object.assign(user, { isBlocked: blocked, blockedReason: blocked ? reason : undefined, blockedAt: blocked ? new Date() : null });
+    return { ...user };
+  }
+
   async findByEmail(email: string): Promise<UserEntity | null> {
     const target = email.toLowerCase();
     for (const user of this.byId.values()) {

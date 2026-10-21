@@ -29,6 +29,7 @@ export class PaymentService {
   ) {}
 
   async createRazorpayOrder(input: CreateRazorpayOrderInput, userId?: string): Promise<RazorpayOrderResponse> {
+    await this.orders.assertCanOrder(userId);
     const settings = await this.settingsRepo.get();
     if (!settings.paymentMethods.onlineEnabled) {
       throw AppError.badRequest('Online payment is currently unavailable.');

@@ -185,14 +185,21 @@ describe('AuthService.googleLogin', () => {
     expect(outcome.issued.result.user.emailVerified).toBe(true);
   });
 
-  it('rejects a blocked account with 403', async () => {
+  it('lets a blocked customer sign in (to reach support), flagged as blocked', async () => {
     const blocked = { ...identity, email: 'blocked@gmail.com' };
-    await users.create({ name: 'B', email: blocked.email, passwordHash: 'x', role: UserRole.Customer });
-    const original = users.findByEmail.bind(users);
-    users.findByEmail = async (e) => {
-      const user = await original(e);
-      return user && { ...user, isBlocked: true };
-    };
+    const user = await users.create({ name: 'B', email: blocked.email, passwordHash: 'x', role: UserRole.Customer });
+    await users.setBlocked(user.id, true, 'Spam orders');
+    verifier.verify = async () => blocked;
+    const outcome = await googleService.googleLogin({ idToken: 'token' }, ctx);
+    expect(outcome.kind).toBe('session');
+    if (outcome.kind !== 'session') return;
+    expect(outcome.issued.result.user).toMatchObject({ isBlocked: true, blockedReason: 'Spam orders' });
+  });
+
+  it('rejects a blocked staff account with 403', async () => {
+    const blocked = { ...identity, email: 'blocked-admin@gmail.com' };
+    const user = await users.create({ name: 'B', email: blocked.email, passwordHash: 'x', role: UserRole.Admin });
+    await users.setBlocked(user.id, true, '');
     verifier.verify = async () => blocked;
     await expect(googleService.googleLogin({ idToken: 'token' }, ctx)).rejects.toMatchObject({ statusCode: 403 });
   });

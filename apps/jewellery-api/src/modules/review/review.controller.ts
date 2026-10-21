@@ -25,6 +25,7 @@ export class ReviewController {
   };
 
   uploadImages = async (req: Request, res: Response): Promise<void> => {
+    await this.reviews.assertCanReview(req.user!.id);
     const files = (req.files as Express.Multer.File[] | undefined) ?? [];
     if (files.length === 0) throw AppError.badRequest('At least one image file is required');
     const urls = await Promise.all(files.map((file) => uploadImageToCloudinary(file.buffer, 'lorka-jewellers/reviews')));

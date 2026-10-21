@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import type { TicketResponse } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
+import { BlockedAccountNotice } from '@/components/blocked-account-notice';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +22,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function AccountTicketsPage() {
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user } = useAuth();
   const router = useRouter();
   const [tickets, setTickets] = useState<TicketResponse[] | null>(null);
   const [subject, setSubject] = useState('');
@@ -77,6 +78,7 @@ export default function AccountTicketsPage() {
     <main className="container py-12">
       <h1 className="text-3xl">My Tickets</h1>
       <p className="mt-2 text-muted-foreground">Raise a support ticket and track its status here.</p>
+      {user?.isBlocked && <BlockedAccountNotice reason={user.blockedReason} showTicketLink={false} className="mt-6 max-w-2xl" />}
 
       <div className="mt-8 grid gap-10 lg:grid-cols-2">
         <div>
