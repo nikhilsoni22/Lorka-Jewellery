@@ -1,4 +1,4 @@
-import type { CheckoutDetailsInput } from '@lorka/types';
+import { COD_FEE_LABEL, paymentAdjustment, type CheckoutDetailsInput, type PaymentMethod } from '@lorka/types';
 import type { OrderChargeEntity, OrderItemEntity, SettingsEntity } from '../../common/interfaces/entities';
 import type { IProductRepository, ISettingsRepository } from '../../common/interfaces/repositories';
 import { AppError } from '../../common/errors/app-error';
@@ -17,6 +17,8 @@ export interface PricedCheckout {
   couponCode?: string;
   discount: number;
   charges: OrderChargeEntity[];
+  /** Off for paying up front; a COD fee is a `charges` line instead. */
+  prepaidDiscount: number;
   total: number;
   /** Problems that were let through because the customer has already paid (admin must follow up). */
   warnings: string[];
@@ -40,7 +42,11 @@ export class CheckoutPricer {
    * hidden, stock gone, coupon used up) then become warnings for the admin instead of errors —
    * rejecting the order would leave the customer charged with no order.
    */
-  async price(input: Pick<CheckoutDetailsInput, 'items' | 'couponCode'>, paid = false): Promise<PricedCheckout> {
+  async price(
+    input: Pick<CheckoutDetailsInput, 'items' | 'couponCode'>,
+    method: PaymentMethod,
+    paid = false,
+  ): Promise<PricedCheckout> {
     const settings = await this.settingsRepo.get();
     const rates = { silverRatePerKg: settings.silverRatePerKg, goldRatePer10g: settings.goldRatePer10g };
     const products = await Promise.all(input.items.map((item) => this.products.findById(item.productId)));
@@ -83,9 +89,12 @@ export class CheckoutPricer {
     }
     const discount = coupon?.discount ?? 0;
     // Charges (e.g. a percentage fee) apply to what the customer actually pays for the goods.
-    const charges = computeCharges(subtotal - discount, settings.charges);
-    const total = round2(subtotal - discount + sumCharges(charges));
+    const goods = subtotal - discount;
+    const charges = computeCharges(goods, settings.charges);
+    const { codFee, prepaidDiscount } = paymentAdjustment(method, goods, settings.paymentPricing);
+    if (codFee > 0) charges.push({ name: COD_FEE_LABEL, amount: codFee });
+    const total = round2(goods + sumCharges(charges) - prepaidDiscount);
 
-    return { settings, items, subtotal, couponCode: coupon?.code, discount, charges, total, warnings };
+    return { settings, items, subtotal, couponCode: coupon?.code, discount, charges, prepaidDiscount, total, warnings };
   }
 }

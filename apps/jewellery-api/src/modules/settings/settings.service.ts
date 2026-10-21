@@ -33,6 +33,7 @@ export function toSettingsResponse(
       upiPayeeName: settings.paymentMethods.upiPayeeName,
       upiPaymentWindowHours: settings.paymentMethods.upiPaymentWindowHours,
     },
+    paymentPricing: settings.paymentPricing,
     storeInfo: settings.storeInfo ?? EMPTY_STORE_INFO,
     policies: settings.policies ?? EMPTY_POLICIES,
     ...(includeRazorpayKeys
@@ -96,6 +97,7 @@ export class SettingsService {
       razorpayKeyId: input.razorpayKeyId,
       razorpayKeySecret: input.razorpayKeySecret,
       razorpayWebhookSecret: input.razorpayWebhookSecret,
+      paymentPricing: input.paymentPricing,
       storeInfo: input.storeInfo,
       policies: input.policies,
     });

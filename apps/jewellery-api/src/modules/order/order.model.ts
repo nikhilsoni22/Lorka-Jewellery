@@ -88,6 +88,7 @@ const orderSchema = new Schema(
     couponCode: { type: String, default: '' },
     discount: { type: Number, default: 0, min: 0 },
     charges: { type: [orderChargeSchema], default: [] },
+    prepaidDiscount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
     notes: { type: String, default: '' },
     giftWrap: { type: Boolean, default: false },

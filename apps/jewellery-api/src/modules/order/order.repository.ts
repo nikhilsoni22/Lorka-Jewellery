@@ -51,6 +51,7 @@ function toEntity(doc: OrderDocument): OrderEntity {
     couponCode: doc.couponCode || undefined,
     discount: doc.discount ?? 0,
     charges: (doc.charges ?? []).map((c) => ({ name: c.name, amount: c.amount })),
+    prepaidDiscount: doc.prepaidDiscount ?? 0,
     total: doc.total,
     notes: doc.notes || undefined,
     giftWrap: doc.giftWrap ?? false,

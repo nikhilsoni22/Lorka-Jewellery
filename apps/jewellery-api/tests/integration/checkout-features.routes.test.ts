@@ -222,3 +222,31 @@ describe('product filters', () => {
     expect(outOfRange.body.data).toHaveLength(0);
   });
 });
+
+describe('COD fee and prepaid discount', () => {
+  it('charges COD orders more and prepaid (UPI) orders less, as set by the admin', async () => {
+    await SettingsModel.updateOne(
+      {},
+      {
+        paymentMethods: { onlineEnabled: false, codEnabled: true, upiEnabled: true, upiId: 'lorka@okaxis' },
+        paymentPricing: {
+          codFee: { type: 'fixed', value: 49 },
+          prepaidDiscount: { type: 'percentage', value: 5, maxAmount: 300 },
+        },
+      },
+    );
+    const productId = await seedProduct();
+    const auth = { Authorization: `Bearer ${customerToken}` };
+
+    const settings = await request(app).get(`${base}/settings`);
+    expect(settings.body.data.paymentPricing.codFee).toMatchObject({ type: 'fixed', value: 49 });
+
+    const cod = await request(app).post(`${base}/orders`).set(auth).send(checkout(productId, { paymentMethod: 'cod' }));
+    expect(cod.body.data).toMatchObject({ subtotal: 1200, prepaidDiscount: 0, total: 1249 });
+    expect(cod.body.data.charges).toContainEqual({ name: 'COD charges', amount: 49 });
+
+    const upi = await request(app).post(`${base}/orders`).set(auth).send(checkout(productId, { paymentMethod: 'upi' }));
+    expect(upi.body.data).toMatchObject({ subtotal: 1200, prepaidDiscount: 60, total: 1140 });
+    expect(upi.body.data.charges).toEqual([]);
+  });
+});

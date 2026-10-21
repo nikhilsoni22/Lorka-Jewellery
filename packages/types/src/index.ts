@@ -15,6 +15,7 @@ export * from './order.schemas';
 export * from './order.dto';
 export * from './payment.schemas';
 export * from './payment.dto';
+export * from './payment-pricing';
 export * from './user.schemas';
 export * from './user.dto';
 export * from './ticket.enums';

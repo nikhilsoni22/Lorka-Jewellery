@@ -8,6 +8,7 @@ import type {
   ProductSort,
   StoreInfoResponse,
   PoliciesResponse,
+  PaymentPricing,
 } from '@lorka/types';
 import type {
   CouponEntity,
@@ -307,6 +308,8 @@ export interface UpdateSettingsData {
   charges: UpdateChargeData[];
   maintenance: UpdateMaintenanceData;
   paymentMethods: PaymentMethodsEntity;
+  /** Undefined = leave the saved value unchanged. */
+  paymentPricing?: PaymentPricing;
   notificationEmail?: string;
   razorpayKeyId?: string;
   razorpayKeySecret?: string;

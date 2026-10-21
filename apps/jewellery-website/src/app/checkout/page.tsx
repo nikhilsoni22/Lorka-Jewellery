@@ -8,6 +8,8 @@ import { Crosshair, Gift, Loader2, Lock, ShieldCheck, Tag, Truck, X } from 'luci
 import {
   ALLOWED_ORDER_CITIES,
   ChargeType,
+  COD_FEE_LABEL,
+  paymentAdjustment,
   type CouponValidationResponse,
   type OrderResponse,
   type RazorpayOrderResponse,
@@ -314,7 +316,17 @@ function CheckoutForm() {
       amount:
         Math.round((c.type === ChargeType.Percentage ? (chargeBase * c.value) / 100 : c.value) * 100) / 100,
     }));
-  const total = Math.round((chargeBase + charges.reduce((sum, c) => sum + c.amount, 0)) * 100) / 100;
+  const totalBeforePayment = chargeBase + charges.reduce((sum, c) => sum + c.amount, 0);
+  // Same helper as the API: a COD fee or a prepaid discount, depending on how the customer pays.
+  const adjustmentFor = (method: PaymentMethod) => paymentAdjustment(method, chargeBase, settings?.paymentPricing);
+  const totalFor = (method: PaymentMethod) => {
+    const { codFee, prepaidDiscount } = adjustmentFor(method);
+    return Math.round((totalBeforePayment + codFee - prepaidDiscount) * 100) / 100;
+  };
+  const { codFee, prepaidDiscount } = adjustmentFor(paymentMethod);
+  const total = totalFor(paymentMethod);
+  const prepaidMethod: PaymentMethod | null = onlineEnabled ? 'razorpay' : upiEnabled ? 'upi' : null;
+  const prepaidSaving = codEnabled && prepaidMethod ? Math.round((totalFor('cod') - totalFor(prepaidMethod)) * 100) / 100 : 0;
 
   const updateField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -635,7 +647,12 @@ function CheckoutForm() {
 
           <div>
             <label className="text-sm font-medium">Payment Method</label>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            {prepaidSaving > 0 && (
+              <p className="mt-1 text-xs font-medium text-emerald-700">
+                Save ₹{prepaidSaving} when you pay {onlineEnabled && upiEnabled ? 'online or by UPI' : onlineEnabled ? 'online' : 'by UPI'}.
+              </p>
+            )}
+            <div className="mt-2 flex flex-col gap-2">
               {onlineEnabled && (
                 <label
                   className={cn(
@@ -650,7 +667,8 @@ function CheckoutForm() {
                     checked={paymentMethod === 'razorpay'}
                     onChange={() => setPaymentMethod('razorpay')}
                   />
-                  Pay Online (Card / UPI / Netbanking)
+                  <span className="flex-1">Pay Online (Card / UPI / Netbanking)</span>
+                  <MethodPrice total={totalFor('razorpay')} base={totalBeforePayment} />
                 </label>
               )}
               {upiEnabled && (
@@ -667,7 +685,8 @@ function CheckoutForm() {
                     checked={paymentMethod === 'upi'}
                     onChange={() => setPaymentMethod('upi')}
                   />
-                  Pay by UPI (GPay / PhonePe / Paytm)
+                  <span className="flex-1">Pay by UPI (GPay / PhonePe / Paytm)</span>
+                  <MethodPrice total={totalFor('upi')} base={totalBeforePayment} />
                 </label>
               )}
               {codEnabled && (
@@ -684,7 +703,8 @@ function CheckoutForm() {
                     checked={paymentMethod === 'cod'}
                     onChange={() => setPaymentMethod('cod')}
                   />
-                  Cash on Delivery
+                  <span className="flex-1">Cash on Delivery</span>
+                  <MethodPrice total={totalFor('cod')} base={totalBeforePayment} />
                 </label>
               )}
               {noPaymentMethod && (
@@ -788,6 +808,18 @@ function CheckoutForm() {
               <span>₹{charge.amount}</span>
             </div>
           ))}
+          {codFee > 0 && (
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>{COD_FEE_LABEL}</span>
+              <span>₹{codFee}</span>
+            </div>
+          )}
+          {prepaidDiscount > 0 && (
+            <div className="flex justify-between text-sm text-emerald-700">
+              <span>Prepaid discount</span>
+              <span>−₹{prepaidDiscount}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-border pt-3 font-serif text-lg">
             <span>Total</span>
             <span>₹{total}</span>
@@ -817,5 +849,17 @@ function CheckoutForm() {
         </div>
       </div>
     </main>
+  );
+}
+
+/** The order total for one payment option, flagged when it's above or below the plain price. */
+function MethodPrice({ total, base }: { total: number; base: number }) {
+  const diff = Math.round((total - base) * 100) / 100;
+  return (
+    <span className="text-right">
+      <span className="block font-medium">₹{total}</span>
+      {diff < 0 && <span className="block text-[11px] text-emerald-700">save ₹{-diff}</span>}
+      {diff > 0 && <span className="block text-[11px] text-muted-foreground">+₹{diff} COD fee</span>}
+    </span>
   );
 }

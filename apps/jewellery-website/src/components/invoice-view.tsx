@@ -146,6 +146,7 @@ export function InvoiceView({ orderNumber, phone }: { orderNumber: string; phone
           {order.charges.map((c) => (
             <Row key={c.name} label={c.name} value={inr(c.amount)} />
           ))}
+          {order.prepaidDiscount > 0 && <Row label="Prepaid discount" value={`−${inr(order.prepaidDiscount)}`} />}
           <div className="flex justify-between border-t border-neutral-300 pt-2 text-base font-semibold">
             <dt>Total</dt>
             <dd>{inr(order.total)}</dd>

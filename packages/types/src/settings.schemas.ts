@@ -62,6 +62,24 @@ export const paymentMethodsInputSchema = z
     }
   });
 
+const paymentPriceRuleSchema = z
+  .object({
+    type: z.nativeEnum(ChargeType).optional().default(ChargeType.Fixed),
+    value: z.coerce.number().min(0).optional().default(0),
+    maxAmount: z.coerce.number().min(0).optional().default(0),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === ChargeType.Percentage && data.value > 100) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['value'], message: 'A percentage cannot exceed 100' });
+    }
+  });
+
+/** COD fee / prepaid discount — see `paymentAdjustment`. */
+export const paymentPricingInputSchema = z.object({
+  codFee: paymentPriceRuleSchema.optional().default({}),
+  prepaidDiscount: paymentPriceRuleSchema.optional().default({}),
+});
+
 const optionalUrl = z.string().trim().url('Must be a full link starting with https://').max(300).or(z.literal(''));
 
 export const storeInfoInputSchema = z.object({
@@ -121,5 +139,6 @@ export const updateSettingsSchema = z.object({
     .transform((v) => (v ? v : undefined)),
   // Optional so an older admin panel that doesn't send them leaves the saved values untouched.
   storeInfo: storeInfoInputSchema.optional(),
+  paymentPricing: paymentPricingInputSchema.optional(),
   policies: policiesInputSchema.optional(),
 });

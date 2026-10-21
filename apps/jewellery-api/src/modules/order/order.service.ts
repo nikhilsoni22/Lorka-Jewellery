@@ -66,6 +66,7 @@ export function toOrderResponse(order: OrderEntity): OrderResponse {
     couponCode: order.couponCode,
     discount: order.discount,
     charges: order.charges,
+    prepaidDiscount: order.prepaidDiscount ?? 0,
     total: order.total,
     notes: order.notes,
     giftWrap: order.giftWrap,
@@ -157,7 +158,7 @@ export class OrderService {
       if (existing) return toOrderResponse(existing);
     }
 
-    const priced = await this.pricer.price(input, paid);
+    const priced = await this.pricer.price(input, method, paid);
     const warnings = [...priced.warnings];
 
     // Reserve stock. A paid order goes through even if stock ran out — the admin is warned instead.
@@ -207,6 +208,7 @@ export class OrderService {
         couponCode: priced.couponCode,
         discount: priced.discount,
         charges: priced.charges,
+        prepaidDiscount: priced.prepaidDiscount,
         total: priced.total,
         notes,
         giftWrap: input.giftWrap,

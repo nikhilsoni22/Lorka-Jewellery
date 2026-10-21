@@ -90,6 +90,12 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
             <span>₹{charge.amount}</span>
           </div>
         ))}
+        {order.prepaidDiscount > 0 && (
+          <div className="flex justify-between text-sm text-emerald-700">
+            <span>Prepaid discount</span>
+            <span>−₹{order.prepaidDiscount}</span>
+          </div>
+        )}
         <div className="flex justify-between border-t border-border pt-4 font-serif text-lg">
           <span>Total</span>
           <span>₹{order.total}</span>

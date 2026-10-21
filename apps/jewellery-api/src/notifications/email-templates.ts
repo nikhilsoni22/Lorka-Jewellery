@@ -116,6 +116,14 @@ function renderOrderConfirmationHtml(
             : ''
         }
         ${chargeRows}
+        ${
+          order.prepaidDiscount > 0
+            ? `<tr>
+          <td style="padding:4px 0;color:#2e7d32;">Prepaid discount</td>
+          <td style="padding:4px 0;text-align:right;color:#2e7d32;">−₹${order.prepaidDiscount}</td>
+        </tr>`
+            : ''
+        }
         <tr>
           <td style="padding:8px 0;font-weight:bold;border-top:1px solid #eee;">Total</td>
           <td style="padding:8px 0;font-weight:bold;text-align:right;border-top:1px solid #eee;">₹${order.total}</td>

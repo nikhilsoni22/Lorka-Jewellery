@@ -1,3 +1,4 @@
+import { ChargeType } from '@lorka/types';
 import type { CategoryEntity, ProductEntity, BannerEntity, SettingsEntity } from '../../src/common/interfaces/entities';
 import type {
   ICategoryRepository,
@@ -194,6 +195,10 @@ export class FakeSettingsRepository implements ISettingsRepository {
     charges: [],
     maintenance: { enabled: false, message: '' },
     paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '', upiPaymentWindowHours: 24 },
+    paymentPricing: {
+      codFee: { type: ChargeType.Fixed, value: 0, maxAmount: 0 },
+      prepaidDiscount: { type: ChargeType.Fixed, value: 0, maxAmount: 0 },
+    },
     createdAt: new Date(),
     updatedAt: new Date(),
   };

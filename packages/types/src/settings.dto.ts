@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { updateSettingsSchema } from './settings.schemas';
+import type { PaymentPricing } from './payment-pricing';
 
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 
@@ -58,6 +59,8 @@ export interface SettingsResponse {
   charges: ChargeResponse[];
   maintenance: MaintenanceResponse;
   paymentMethods: PaymentMethodsResponse;
+  /** COD fee / prepaid discount the checkout applies on top of the cart. */
+  paymentPricing: PaymentPricing;
   storeInfo: StoreInfoResponse;
   policies: PoliciesResponse;
   /** Only present when fetched by an authenticated admin — omitted from the public response. */

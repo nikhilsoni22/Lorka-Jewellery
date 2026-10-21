@@ -33,6 +33,23 @@ const paymentMethodsSchema = new Schema(
   { _id: false },
 );
 
+const paymentPriceRuleSchema = new Schema(
+  {
+    type: { type: String, enum: Object.values(ChargeType), default: ChargeType.Fixed },
+    value: { type: Number, default: 0, min: 0 },
+    maxAmount: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false },
+);
+
+const paymentPricingSchema = new Schema(
+  {
+    codFee: { type: paymentPriceRuleSchema, default: () => ({}) },
+    prepaidDiscount: { type: paymentPriceRuleSchema, default: () => ({}) },
+  },
+  { _id: false },
+);
+
 const storeInfoSchema = new Schema(
   {
     phone: { type: String, default: '' },
@@ -64,6 +81,7 @@ const settingsSchema = new Schema(
     charges: { type: [chargeSchema], default: [] },
     maintenance: { type: maintenanceSchema, default: () => ({}) },
     paymentMethods: { type: paymentMethodsSchema, default: () => ({}) },
+    paymentPricing: { type: paymentPricingSchema, default: () => ({}) },
     notificationEmail: { type: String, default: '' },
     razorpayKeyId: { type: String, default: '' },
     razorpayKeySecret: { type: String, default: '' },

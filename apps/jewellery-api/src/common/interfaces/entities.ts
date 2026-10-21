@@ -10,6 +10,7 @@ import type {
   CheckoutDetailsInput,
   StoreInfoResponse,
   PoliciesResponse,
+  PaymentPricing,
 } from '@lorka/types';
 
 export interface UserEntity {
@@ -144,6 +145,7 @@ export interface OrderEntity {
   couponCode?: string;
   discount: number;
   charges: OrderChargeEntity[];
+  prepaidDiscount: number;
   total: number;
   notes?: string;
   giftWrap: boolean;
@@ -240,6 +242,7 @@ export interface SettingsEntity {
   charges: ChargeEntity[];
   maintenance: MaintenanceEntity;
   paymentMethods: PaymentMethodsEntity;
+  paymentPricing: PaymentPricing;
   notificationEmail?: string;
   razorpayKeyId?: string;
   razorpayKeySecret?: string;

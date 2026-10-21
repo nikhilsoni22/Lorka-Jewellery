@@ -374,6 +374,12 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
                   <dd>{inr(charge.amount)}</dd>
                 </div>
               ))}
+              {order.prepaidDiscount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <dt>Prepaid discount</dt>
+                  <dd>−{inr(order.prepaidDiscount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between border-t border-border pt-3 font-serif text-lg">
                 <dt>Total</dt>
                 <dd>{inr(order.total)}</dd>

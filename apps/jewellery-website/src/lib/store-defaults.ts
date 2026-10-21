@@ -1,4 +1,4 @@
-import type { SettingsResponse, StoreInfoResponse } from '@lorka/types';
+import { ChargeType, type SettingsResponse, type StoreInfoResponse } from '@lorka/types';
 
 export const EMPTY_STORE_INFO: StoreInfoResponse = {
   phone: '',
@@ -18,6 +18,10 @@ export const FALLBACK_SETTINGS: SettingsResponse = {
   charges: [],
   maintenance: { enabled: false, message: '' },
   paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '', upiPaymentWindowHours: 24 },
+  paymentPricing: {
+    codFee: { type: ChargeType.Fixed, value: 0, maxAmount: 0 },
+    prepaidDiscount: { type: ChargeType.Fixed, value: 0, maxAmount: 0 },
+  },
   storeInfo: EMPTY_STORE_INFO,
   policies: { privacy: '', terms: '', refund: '', shipping: '' },
 };
@@ -31,6 +35,7 @@ export function normalizeSettings(settings: Partial<SettingsResponse> | null | u
     ...FALLBACK_SETTINGS,
     ...settings,
     paymentMethods: { ...FALLBACK_SETTINGS.paymentMethods, ...settings?.paymentMethods },
+    paymentPricing: { ...FALLBACK_SETTINGS.paymentPricing, ...settings?.paymentPricing },
     storeInfo: { ...EMPTY_STORE_INFO, ...settings?.storeInfo },
     policies: { ...FALLBACK_SETTINGS.policies, ...settings?.policies },
   };

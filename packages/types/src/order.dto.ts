@@ -78,7 +78,10 @@ export interface OrderResponse {
   /** Coupon applied at checkout, if any; `discount` is taken off the subtotal before charges. */
   couponCode?: string;
   discount: number;
+  /** COD orders carry their COD fee as a `charges` line instead (named COD_FEE_LABEL). */
   charges: OrderChargeResponse[];
+  /** Taken off for paying up front (online / UPI). */
+  prepaidDiscount: number;
   total: number;
   notes?: string;
   giftWrap: boolean;

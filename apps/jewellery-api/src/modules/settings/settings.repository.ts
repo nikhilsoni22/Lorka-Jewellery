@@ -1,8 +1,16 @@
-import type { ChargeType } from '@lorka/types';
+import { ChargeType, type PaymentPriceRule } from '@lorka/types';
 import type { SettingsEntity } from '../../common/interfaces/entities';
 import type { ISettingsRepository, UpdateSettingsData } from '../../common/interfaces/repositories';
 import { env } from '../../config/env';
 import { SettingsModel, type SettingsDocument } from './settings.model';
+
+function toRule(rule: { type?: string | null; value?: number | null; maxAmount?: number | null } | null | undefined): PaymentPriceRule {
+  return {
+    type: (rule?.type as ChargeType) ?? ChargeType.Fixed,
+    value: rule?.value ?? 0,
+    maxAmount: rule?.maxAmount ?? 0,
+  };
+}
 
 function toEntity(doc: SettingsDocument): SettingsEntity {
   return {
@@ -29,6 +37,10 @@ function toEntity(doc: SettingsDocument): SettingsEntity {
       upiId: doc.paymentMethods?.upiId ?? '',
       upiPayeeName: doc.paymentMethods?.upiPayeeName ?? '',
       upiPaymentWindowHours: doc.paymentMethods?.upiPaymentWindowHours ?? 24,
+    },
+    paymentPricing: {
+      codFee: toRule(doc.paymentPricing?.codFee),
+      prepaidDiscount: toRule(doc.paymentPricing?.prepaidDiscount),
     },
     notificationEmail: doc.notificationEmail || undefined,
     razorpayKeyId: doc.razorpayKeyId || undefined,
@@ -106,6 +118,7 @@ export class SettingsRepository implements ISettingsRepository {
     doc.set('razorpayKeyId', data.razorpayKeyId ?? '');
     doc.set('razorpayKeySecret', data.razorpayKeySecret ?? '');
     doc.set('razorpayWebhookSecret', data.razorpayWebhookSecret ?? '');
+    if (data.paymentPricing) doc.set('paymentPricing', data.paymentPricing);
     if (data.storeInfo) doc.set('storeInfo', data.storeInfo);
     if (data.policies) doc.set('policies', data.policies);
 

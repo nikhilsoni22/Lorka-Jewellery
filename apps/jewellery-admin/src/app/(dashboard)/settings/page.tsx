@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import { Copy, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ChargeType, type PoliciesResponse, type StoreInfoResponse } from '@lorka/types';
+import {
+  ChargeType,
+  PaymentMethod,
+  paymentAdjustment,
+  type PaymentPricing,
+  type PoliciesResponse,
+  type StoreInfoResponse,
+} from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +51,25 @@ const POLICY_FIELDS: { key: keyof PoliciesResponse; label: string; path: string 
   { key: 'shipping', label: 'Shipping & Delivery', path: '/policies/shipping' },
 ];
 
+/** Form state for one COD-fee / prepaid-discount rule — numbers kept as typed text. */
+interface PriceRuleRow {
+  type: ChargeType;
+  value: string;
+  maxAmount: string;
+}
+
+const EMPTY_RULE: PriceRuleRow = { type: ChargeType.Fixed, value: '0', maxAmount: '0' };
+const toRuleRow = (rule?: PaymentPricing['codFee']): PriceRuleRow =>
+  rule ? { type: rule.type, value: String(rule.value), maxAmount: String(rule.maxAmount) } : EMPTY_RULE;
+const toRule = (row: PriceRuleRow) => ({ type: row.type, value: Number(row.value), maxAmount: Number(row.maxAmount) });
+const isValidRule = (row: PriceRuleRow) =>
+  Number(row.value) >= 0 &&
+  Number(row.maxAmount) >= 0 &&
+  !(row.type === ChargeType.Percentage && Number(row.value) > 100);
+
+/** Example order value for the live preview under the pricing settings. */
+const EXAMPLE_ORDER = 10_000;
+
 function toDatetimeLocal(iso?: string): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -67,6 +93,8 @@ export default function SettingsPage() {
     upiPayeeName: '',
     upiPaymentWindowHours: '24',
   });
+  const [codFee, setCodFee] = useState<PriceRuleRow>(EMPTY_RULE);
+  const [prepaidDiscount, setPrepaidDiscount] = useState<PriceRuleRow>(EMPTY_RULE);
   const [notificationEmail, setNotificationEmail] = useState('');
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
@@ -103,6 +131,8 @@ export default function SettingsPage() {
       upiPayeeName: data.paymentMethods?.upiPayeeName ?? '',
       upiPaymentWindowHours: String(data.paymentMethods?.upiPaymentWindowHours ?? 24),
     });
+    setCodFee(toRuleRow(data.paymentPricing?.codFee));
+    setPrepaidDiscount(toRuleRow(data.paymentPricing?.prepaidDiscount));
     setNotificationEmail(data.notificationEmail ?? '');
     setRazorpayKeyId(data.razorpayKeyId ?? '');
     setRazorpayKeySecret(data.razorpayKeySecret ?? '');
@@ -154,6 +184,10 @@ export default function SettingsPage() {
       toast.error('Keep at least one payment method enabled, or customers cannot place orders');
       return;
     }
+    if (!isValidRule(codFee) || !isValidRule(prepaidDiscount)) {
+      toast.error('COD fee / prepaid discount: enter amounts of 0 or more, and percentages up to 100');
+      return;
+    }
     const upiId = paymentMethods.upiId.trim();
     if (paymentMethods.upiEnabled && !upiId) {
       toast.error('Add your UPI ID to turn on UPI payments');
@@ -192,6 +226,7 @@ export default function SettingsPage() {
           upiPayeeName: paymentMethods.upiPayeeName.trim(),
           upiPaymentWindowHours,
         },
+        paymentPricing: { codFee: toRule(codFee), prepaidDiscount: toRule(prepaidDiscount) },
         notificationEmail: notificationEmail.trim() || undefined,
         razorpayKeyId: razorpayKeyId.trim() || undefined,
         razorpayKeySecret: razorpayKeySecret.trim() || undefined,
@@ -466,6 +501,43 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-xl">COD &amp; Prepaid Pricing</CardTitle>
+          <CardDescription>
+            Charge a little more for Cash on Delivery and/or give a discount for paying up front (online or
+            UPI) — customers see the price of each option at checkout. Worked out on the cart value after
+            coupons. Set a value to 0 to turn it off.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <PriceRuleFields
+            title="Extra charge for Cash on Delivery"
+            row={codFee}
+            onChange={setCodFee}
+          />
+          <PriceRuleFields
+            title="Discount for prepaid orders (online / UPI)"
+            row={prepaidDiscount}
+            onChange={setPrepaidDiscount}
+          />
+          {(() => {
+            const pricing = { codFee: toRule(codFee), prepaidDiscount: toRule(prepaidDiscount) };
+            const cod = paymentAdjustment(PaymentMethod.Cod, EXAMPLE_ORDER, pricing).codFee;
+            const prepaid = paymentAdjustment(PaymentMethod.Upi, EXAMPLE_ORDER, pricing).prepaidDiscount;
+            if (!cod && !prepaid) return null;
+            return (
+              <p className="rounded-lg bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                Example — a ₹{EXAMPLE_ORDER.toLocaleString('en-IN')} cart: Cash on Delivery{' '}
+                <strong className="text-foreground">₹{(EXAMPLE_ORDER + cod).toLocaleString('en-IN')}</strong>, paid
+                online / UPI <strong className="text-foreground">₹{(EXAMPLE_ORDER - prepaid).toLocaleString('en-IN')}</strong>{' '}
+                (plus any extra charges above).
+              </p>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Payment Gateway (Razorpay)</CardTitle>
           <CardDescription>
             Get these from your{' '}
@@ -643,6 +715,55 @@ export default function SettingsPage() {
           </Button>
         </CardFooter>
       </Card>
+    </div>
+  );
+}
+
+function PriceRuleFields({
+  title,
+  row,
+  onChange,
+}: {
+  title: string;
+  row: PriceRuleRow;
+  onChange: (row: PriceRuleRow) => void;
+}) {
+  const percentage = row.type === ChargeType.Percentage;
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <p className="text-sm font-medium">{title}</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1">
+          <Label>Type</Label>
+          <Select value={row.type} onChange={(e) => onChange({ ...row, type: e.target.value as ChargeType })}>
+            <option value={ChargeType.Fixed}>Fixed (₹)</option>
+            <option value={ChargeType.Percentage}>Percentage (%)</option>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>{percentage ? 'Percent' : 'Amount (₹)'}</Label>
+          <Input
+            type="number"
+            min="0"
+            max={percentage ? 100 : undefined}
+            step="0.01"
+            value={row.value}
+            onChange={(e) => onChange({ ...row, value: e.target.value })}
+          />
+        </div>
+        {percentage && (
+          <div className="space-y-1">
+            <Label>Maximum (₹, 0 = no limit)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              value={row.maxAmount}
+              onChange={(e) => onChange({ ...row, maxAmount: e.target.value })}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

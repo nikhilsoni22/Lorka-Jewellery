@@ -1,4 +1,4 @@
-import type { CreateRazorpayOrderInput, RazorpayOrderResponse } from '@lorka/types';
+import { PaymentMethod, type CreateRazorpayOrderInput, type RazorpayOrderResponse } from '@lorka/types';
 import type { IPendingCheckoutRepository, ISettingsRepository } from '../../common/interfaces/repositories';
 import type { IEmailService } from '../../common/interfaces/services';
 import { AppError } from '../../common/errors/app-error';
@@ -38,7 +38,7 @@ export class PaymentService {
       throw AppError.badRequest('Online payment is not configured yet. Add your Razorpay keys in Settings.');
     }
 
-    const { total } = await this.pricer.price(input);
+    const { total } = await this.pricer.price(input, PaymentMethod.Razorpay);
     if (total <= 0) throw AppError.badRequest('Order total must be greater than zero');
 
     const amountPaise = Math.round(total * 100);

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MetalType } from '@lorka/types';
+import { ChargeType, MetalType } from '@lorka/types';
 import { ProductService } from '../../src/modules/product/product.service';
 import { CategoryService } from '../../src/modules/category/category.service';
 import {
@@ -180,6 +180,10 @@ describe('live silver/gold pricing', () => {
       charges: [],
       maintenance: { enabled: false, message: '' },
       paymentMethods: { onlineEnabled: true, codEnabled: true, upiEnabled: false, upiId: '', upiPayeeName: '', upiPaymentWindowHours: 24 },
+    paymentPricing: {
+      codFee: { type: ChargeType.Fixed, value: 0, maxAmount: 0 },
+      prepaidDiscount: { type: ChargeType.Fixed, value: 0, maxAmount: 0 },
+    },
     });
 
     const repriced = await productService.getById(product.id);
