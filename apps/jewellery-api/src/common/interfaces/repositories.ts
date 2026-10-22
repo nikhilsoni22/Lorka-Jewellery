@@ -190,16 +190,16 @@ export interface IOrderRepository {
   setBuildEta(id: string, estimatedReadyDate: Date): Promise<OrderEntity | null>;
   findByUpiReference(upiReference: string): Promise<OrderEntity | null>;
   /**
-   * Saves the customer's UTR on a UPI order whose payment is still `from` one of the given
-   * statuses, and puts it (back) to pending verification. Null if the order isn't in that state.
-   * Throws `DuplicateUpiReferenceError` if another order already has this UTR.
+   * Records the customer's "I have paid" (and their UTR, if given) on a UPI order whose payment is
+   * still `from` one of the given statuses, putting it (back) to pending verification. Null if the
+   * order isn't in that state. Throws `DuplicateUpiReferenceError` if another order has this UTR.
    */
-  submitUpiReference(id: string, upiReference: string, from: PaymentStatus[]): Promise<OrderEntity | null>;
-  /** UPI orders past `upiPaymentDueAt` with no transaction ID entered (see `cancelIfAwaitingUpiPayment`). */
+  submitUpiReference(id: string, upiReference: string | undefined, from: PaymentStatus[]): Promise<OrderEntity | null>;
+  /** UPI orders past `upiPaymentDueAt` the customer never said they paid (see `cancelIfAwaitingUpiPayment`). */
   findOverdueUpiOrderIds(now: Date): Promise<string[]>;
   /**
-   * Cancels the order only if it is still an overdue, unpaid UPI order with no transaction ID —
-   * atomic, so a UTR submitted at the same moment always wins. Null if it no longer qualifies.
+   * Cancels the order only if it is still an overdue UPI order the customer never said they paid —
+   * atomic, so an "I have paid" at the same moment always wins. Null if it no longer qualifies.
    */
   cancelIfAwaitingUpiPayment(id: string, now: Date): Promise<OrderEntity | null>;
   /** Moves a UPI order's payment from one of `from` to `to` (the admin's verify / reject). */

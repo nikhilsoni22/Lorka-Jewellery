@@ -64,12 +64,13 @@ function toEntity(doc: OrderDocument): OrderEntity {
   };
 }
 
-/** A UPI order past its payment deadline that the customer never entered a transaction ID for. */
+/** A UPI order past its payment deadline that the customer never said they paid ("I have paid"). */
 function awaitingUpiPayment(now: Date) {
   return {
     paymentMethod: PaymentMethod.Upi,
     status: OrderStatus.Pending,
     paymentStatus: PaymentStatus.Pending,
+    upiSubmittedAt: null,
     upiReference: { $in: ['', null] },
     upiPaymentDueAt: { $ne: null, $lte: now },
   };
@@ -141,11 +142,21 @@ export class OrderRepository implements IOrderRepository {
     return doc ? toEntity(doc) : null;
   }
 
-  async submitUpiReference(id: string, upiReference: string, from: PaymentStatus[]): Promise<OrderEntity | null> {
+  async submitUpiReference(
+    id: string,
+    upiReference: string | undefined,
+    from: PaymentStatus[],
+  ): Promise<OrderEntity | null> {
     try {
       const doc = await OrderModel.findOneAndUpdate(
         { _id: id, paymentMethod: PaymentMethod.Upi, paymentStatus: { $in: from }, status: { $ne: OrderStatus.Cancelled } },
-        { $set: { upiReference, upiSubmittedAt: new Date(), paymentStatus: PaymentStatus.Pending } },
+        {
+          $set: {
+            ...(upiReference ? { upiReference } : {}),
+            upiSubmittedAt: new Date(),
+            paymentStatus: PaymentStatus.Pending,
+          },
+        },
         { new: true },
       )
         .lean<OrderDocument>()
@@ -153,7 +164,7 @@ export class OrderRepository implements IOrderRepository {
       return doc ? toEntity(doc) : null;
     } catch (err) {
       const mongoErr = err as { code?: number; keyPattern?: Record<string, unknown> };
-      if (mongoErr.code === 11000 && mongoErr.keyPattern?.upiReference) {
+      if (mongoErr.code === 11000 && mongoErr.keyPattern?.upiReference && upiReference) {
         throw new DuplicateUpiReferenceError(upiReference);
       }
       throw err;

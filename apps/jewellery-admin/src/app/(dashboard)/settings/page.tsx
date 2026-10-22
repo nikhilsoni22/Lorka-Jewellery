@@ -444,9 +444,12 @@ export default function SettingsPage() {
           {paymentMethods.upiEnabled && (
             <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
               <p className="text-xs text-muted-foreground">
-                After placing the order the customer sees a QR code for the exact amount, pays from any UPI app
-                and enters the transaction ID (UTR). You get an email; check the credit in your bank / UPI app, then
-                open the order and click <strong>Verify payment</strong> — the customer is emailed automatically.
+                After placing the order the customer sees a QR code for the exact amount (with the note
+                &ldquo;Order &lt;number&gt;&rdquo;), pays from any UPI app and taps <strong>I have paid</strong> — the
+                transaction ID (UTR) is optional. You get an email; find the credit by its amount and note in your
+                business UPI app / bank, then open the order and click <strong>Verify payment</strong> — the customer
+                is emailed automatically. Can&apos;t find it? Click <strong>Not received</strong> and the customer is
+                asked for their UTR.
                 A business / merchant UPI ID (PhonePe Business, Paytm Business, BharatPe…) works best.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -478,15 +481,16 @@ export default function SettingsPage() {
                     onChange={(e) => setPaymentMethods((m) => ({ ...m, upiPaymentWindowHours: e.target.value }))}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Orders with no transaction ID entered by then are cancelled automatically and their stock is
-                    released. Orders with a transaction ID are never auto-cancelled — you review those.
+                    Orders where the customer hasn&apos;t tapped &ldquo;I have paid&rdquo; by then are cancelled
+                    automatically and their stock is released. Orders marked as paid are never auto-cancelled — you
+                    review those.
                   </p>
                 </div>
               </div>
               {!notificationEmail.trim() && (
                 <p className="text-xs text-destructive">
-                  Set a notification email below so you get an email every time a customer enters a UPI
-                  transaction ID.
+                  Set a notification email below so you get an email every time a customer says they&apos;ve paid
+                  by UPI.
                 </p>
               )}
             </div>

@@ -505,7 +505,7 @@ function PaymentPill({ order }: { order: OrderResponse }) {
     <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800">
       {order.paymentMethod === 'cod'
         ? 'Pay on delivery'
-        : order.paymentMethod === 'upi' && order.upiReference
+        : order.paymentMethod === 'upi' && order.upiSubmittedAt
           ? 'Verifying'
           : 'Pending'}
     </span>

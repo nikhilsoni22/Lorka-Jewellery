@@ -92,11 +92,18 @@ export const upiReferenceSchema = z
   .toUpperCase()
   .regex(/^[A-Z0-9]{6,35}$/, 'Enter the UPI transaction ID / UTR exactly as shown in your UPI app');
 
-/** Customer → us, after paying a UPI order. Located by orderNumber + phone, like order tracking. */
+/**
+ * Customer → us, after paying a UPI order ("I have paid"). Located by orderNumber + phone, like
+ * order tracking. The UTR is optional: the admin can usually match the payment by its amount and
+ * the "Order <number>" note the QR fills in — it's only required after a payment was rejected.
+ */
 export const submitUpiPaymentSchema = z.object({
   orderNumber: z.string().trim().min(1),
   phone: z.string().trim().min(1),
-  upiReference: upiReferenceSchema,
+  upiReference: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    upiReferenceSchema.optional(),
+  ),
 });
 
 /** Admin's decision on a manual (UPI) payment after checking the bank account. */

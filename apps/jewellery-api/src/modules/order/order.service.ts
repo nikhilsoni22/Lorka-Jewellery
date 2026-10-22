@@ -235,8 +235,9 @@ export class OrderService {
   }
 
   /**
-   * Customer → us, after paying a UPI order from their UPI app: records the UTR so the admin can
-   * match it in the bank. Can be resubmitted (to fix a typo) until the admin verifies the payment.
+   * Customer → us, after paying a UPI order from their UPI app ("I have paid"). The UTR is optional —
+   * the admin usually matches the payment by amount and the "Order <number>" note — except after a
+   * rejection, when we need it to find the payment. Can be resubmitted until the admin verifies.
    */
   async submitUpiPayment(input: SubmitUpiPaymentInput): Promise<OrderResponse> {
     const order = await this.orders.findByOrderNumberAndPhone(input.orderNumber, input.phone);
@@ -248,7 +249,14 @@ export class OrderService {
     if (order.paymentStatus === PaymentStatus.Paid) {
       throw AppError.badRequest('The payment for this order has already been verified');
     }
-    if (order.upiReference === input.upiReference && order.paymentStatus === PaymentStatus.Pending) {
+    if (order.paymentStatus === PaymentStatus.Failed && !input.upiReference) {
+      throw AppError.badRequest(
+        "We couldn't find your payment by its amount. Please enter the UPI transaction ID (UTR) from your UPI app.",
+      );
+    }
+    // Pressing "I have paid" again, or resending the same UTR, changes nothing (and re-alerts nobody).
+    const alreadyClaimed = order.paymentStatus === PaymentStatus.Pending && order.upiSubmittedAt;
+    if (alreadyClaimed && (!input.upiReference || input.upiReference === order.upiReference)) {
       return toOrderResponse(order);
     }
 

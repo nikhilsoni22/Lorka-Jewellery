@@ -716,7 +716,7 @@ function CheckoutForm() {
             {paymentMethod === 'upi' && upiEnabled && (
               <p className="mt-2 text-xs text-muted-foreground">
                 After you place the order, we&apos;ll show a UPI QR code for the exact amount. Pay with any UPI app
-                and enter the transaction ID — your order is confirmed once we verify the payment.
+                and tap &ldquo;I have paid&rdquo; — your order is confirmed once we verify the payment.
               </p>
             )}
           </div>

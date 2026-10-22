@@ -156,7 +156,7 @@ function renderOrderConfirmationHtml(
         Payment method: ${order.paymentMethod.toUpperCase()} (${order.paymentStatus})
         ${
           audience === 'customer' && isAwaitingUpiPayment(order)
-            ? `<br />Haven't paid yet? <a href="${trackOrderUrl(order)}">Open your order</a> to pay by UPI and enter the transaction ID${
+            ? `<br />Haven't paid yet? <a href="${trackOrderUrl(order)}">Open your order</a> to pay by UPI and tap "I have paid"${
                 order.upiPaymentDueAt ? ` by ${formatDateTime(order.upiPaymentDueAt)} (unpaid orders are cancelled automatically)` : ''
               } — we'll email you as soon as the payment is verified.`
             : ''
@@ -396,8 +396,8 @@ export function paymentRejectedEmail(order: OrderResponse, reason: string): Emai
         <p>Hi ${escapeHtml(order.customerName)}, we couldn't find a UPI payment of <strong>₹${order.total}</strong>
         for order <strong>${order.orderNumber}</strong>${order.upiReference ? ` with transaction ID ${escapeHtml(order.upiReference)}` : ''}.</p>
         ${reason ? `<div style="background:#f7f4ef;border-left:3px solid #c9a24a;padding:12px 16px;font-size:14px;">${escapeHtml(reason)}</div>` : ''}
-        <p>If you have paid, please open your order and enter the correct UPI transaction ID (UTR) from your
-        UPI app, or reply to this email and we'll sort it out.</p>
+        <p>If you have paid, please open your order and enter the UPI transaction ID (UTR) — you'll find it
+        in your UPI app's payment history — or reply to this email and we'll sort it out.</p>
         ${trackOrderButton(order, 'Open your order')}
         <p style="margin-top:24px;">With love,<br />Lorka Jewellers</p>
       </div>
@@ -429,12 +429,16 @@ export function adminUpiPaymentSubmittedEmail(order: OrderResponse): EmailConten
     html: `
       <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
         <h1 style="font-size:22px;">A customer says they've paid by UPI</h1>
-        <p>Check your bank / UPI app for this credit. Only once you can see it, open the order in the admin
-        panel and click <strong>Verify payment</strong> — the customer is emailed automatically.</p>
+        <p>Look in your business UPI app / bank for a credit of <strong>₹${order.total}</strong>
+        ${order.upiReference ? 'with the UTR below' : `with the note <strong>"Order ${order.orderNumber}"</strong>`}.
+        Only once you can see it, open the order in the admin panel and click <strong>Verify payment</strong> —
+        the customer is emailed automatically. Can't find it? Click <strong>Not received</strong> and the
+        customer will be asked for their UPI transaction ID.</p>
         <table style="border-collapse:collapse;margin-top:16px;font-size:14px;">
           ${row('Order', `<strong>${order.orderNumber}</strong>`)}
           ${row('Amount', `<strong>₹${order.total}</strong>`)}
-          ${row('UPI transaction ID (UTR)', `<strong>${escapeHtml(order.upiReference ?? '')}</strong>`)}
+          ${row('Payment note', `Order ${order.orderNumber}`)}
+          ${row('UPI transaction ID (UTR)', order.upiReference ? `<strong>${escapeHtml(order.upiReference)}</strong>` : '<span style="color:#999;">Not given</span>')}
           ${row('Customer', escapeHtml(order.customerName))}
           ${row('Phone', `<a href="tel:${escapeHtml(order.customerPhone)}">${escapeHtml(order.customerPhone)}</a>`)}
         </table>

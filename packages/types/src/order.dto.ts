@@ -64,6 +64,7 @@ export interface OrderResponse {
   razorpayPaymentId?: string;
   /** UPI transaction ID / UTR the customer entered after paying — the admin matches it in the bank. */
   upiReference?: string;
+  /** When the customer said they'd paid ("I have paid"), with or without a UTR. */
   upiSubmittedAt?: string;
   /** UPI orders only: cancelled automatically if no transaction ID is entered by then. */
   upiPaymentDueAt?: string;

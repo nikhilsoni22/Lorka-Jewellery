@@ -103,7 +103,7 @@ export default function OrderDetailPage() {
   const handleVerifyPayment = () => {
     if (
       !window.confirm(
-        `Have you checked your bank / UPI app and received ₹${order.total}${order.upiReference ? ` with UTR ${order.upiReference}` : ''}? The customer will be emailed that their payment is verified.`,
+        `Have you checked your bank / UPI app and received ₹${order.total}${order.upiReference ? ` with UTR ${order.upiReference}` : ` with the note "Order ${order.orderNumber}"`}? The customer will be emailed that their payment is verified.`,
       )
     )
       return;
@@ -265,15 +265,26 @@ export default function OrderDetailPage() {
             )}
             {isUpi && (
               <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                {order.upiReference ? (
-                  <p className="break-all">
-                    UTR: <span className="font-mono text-sm font-medium text-foreground">{order.upiReference}</span>
-                    {order.upiSubmittedAt && ` · entered ${new Date(order.upiSubmittedAt).toLocaleString()}`}
-                  </p>
+                {order.upiSubmittedAt ? (
+                  <>
+                    <p>Customer marked as paid {new Date(order.upiSubmittedAt).toLocaleString()}.</p>
+                    <p className="break-all">
+                      {order.upiReference ? (
+                        <>
+                          UTR: <span className="font-mono text-sm font-medium text-foreground">{order.upiReference}</span>
+                        </>
+                      ) : (
+                        <>
+                          No UTR given — look for ₹{order.total} with the note{' '}
+                          <span className="font-medium text-foreground">&ldquo;Order {order.orderNumber}&rdquo;</span>.
+                        </>
+                      )}
+                    </p>
+                  </>
                 ) : (
                   order.paymentStatus === 'pending' && (
                     <p>
-                      Customer hasn&apos;t entered a UPI transaction ID yet.
+                      Customer hasn&apos;t marked this order as paid yet.
                       {order.upiPaymentDueAt &&
                         order.status !== 'cancelled' &&
                         ` Auto-cancels ${new Date(order.upiPaymentDueAt).toLocaleString()} if still unpaid.`}
@@ -282,7 +293,7 @@ export default function OrderDetailPage() {
                 )}
                 {order.paymentVerifiedAt && <p>Verified on {new Date(order.paymentVerifiedAt).toLocaleString()}</p>}
                 {order.paymentStatus === 'failed' && (
-                  <p className="text-destructive">Marked as not received — the customer can enter a new UTR.</p>
+                  <p className="text-destructive">Marked as not received — the customer has been asked for their UTR.</p>
                 )}
               </div>
             )}
@@ -291,7 +302,8 @@ export default function OrderDetailPage() {
                 <p className="text-sm font-medium">Verify UPI payment</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Check your bank / UPI app for a credit of ₹{order.total}
-                  {order.upiReference ? ' with this UTR' : ''} before verifying. Never go by a screenshot alone.
+                  {order.upiReference ? ' with this UTR' : ` with the note "Order ${order.orderNumber}"`} before verifying.
+                  Never go by a screenshot alone.
                 </p>
                 <div className="mt-2 flex gap-2">
                   <Button onClick={handleVerifyPayment} disabled={reviewPayment.isPending}>
