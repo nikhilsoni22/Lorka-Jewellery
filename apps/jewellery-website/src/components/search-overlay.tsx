@@ -151,7 +151,7 @@ export function SearchOverlay({ categories }: { categories: SearchCategory[] }) 
         onClick={() => setOpen(true)}
         className="inline-flex text-foreground transition-colors hover:text-gold"
       >
-        <Search className="h-[18px] w-[18px]" strokeWidth={1.5} />
+        <Search className="h-5 w-5" strokeWidth={1.3} />
       </button>
 
       {open && (

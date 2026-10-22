@@ -17,11 +17,9 @@ export function WishlistIndicator() {
       aria-label="View wishlist"
       className="relative hidden items-center text-foreground transition-colors hover:text-gold sm:inline-flex"
     >
-      <Heart className="h-[18px] w-[18px]" strokeWidth={1.5} />
+      <Heart className="h-5 w-5" strokeWidth={1.3} />
       {count > 0 && (
-        <span className="absolute -right-2.5 -top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-          {count}
-        </span>
+        <span className="absolute -right-2 -top-1.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-gold px-1 text-[9px] font-semibold leading-none text-ivory">{count}</span>
       )}
     </Link>
   );

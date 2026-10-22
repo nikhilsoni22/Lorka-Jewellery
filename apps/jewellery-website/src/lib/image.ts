@@ -20,3 +20,11 @@ export function optimizedSrcSet(url: string | undefined, widths: number[]): stri
   if (!url || !url.includes('res.cloudinary.com')) return undefined;
   return widths.map((w) => `${optimizedImage(url, w)} ${w}w`).join(', ');
 }
+
+/** First-frame JPEG for a Cloudinary video — shown while the video loads. '' for other URLs. */
+export function videoPoster(url: string | undefined, width: number): string {
+  if (!url || !url.includes('res.cloudinary.com') || !url.includes('/video/upload/')) return '';
+  return url
+    .replace('/video/upload/', `/video/upload/so_0,f_jpg,q_auto,w_${width}/`)
+    .replace(/\.[a-z0-9]+$/i, '.jpg');
+}

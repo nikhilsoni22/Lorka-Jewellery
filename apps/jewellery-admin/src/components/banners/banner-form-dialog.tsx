@@ -123,7 +123,7 @@ export function BannerFormDialog({
           <DialogDescription>
             {isEditing
               ? 'Update this banner.'
-              : 'Create a homepage banner or a festival background.'}
+              : 'Create a homepage banner or a festival banner.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -172,7 +172,7 @@ export function BannerFormDialog({
               <Select id="ban-placement" {...register('placement')}>
                 <option value="hero">Hero (homepage top)</option>
                 <option value="promo">Promo</option>
-                <option value="festival">Festival background (homepage top GIF / video)</option>
+                <option value="festival">Festival banner (homepage GIF / video)</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -183,9 +183,9 @@ export function BannerFormDialog({
 
           {isFestival && (
             <p className="rounded-md border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
-              Your GIF/video plays in the background of the homepage top section (behind the header
-              and hero), getting softly blurred towards the bottom and fading into the page.
-              Landscape videos work best. Set Starts/Ends so it appears only during the festival. If
+              Your GIF/video is shown as a full-width banner on the homepage, at its own shape (on
+              phones the centre 16:9 is shown, so keep text in the middle). Wide landscape banners
+              (around 3:1) work best. Set Starts/Ends so it appears only during the festival. If
               several are live, the one with the lowest sort order is shown.
             </p>
           )}

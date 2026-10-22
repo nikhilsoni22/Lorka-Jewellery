@@ -1,12 +1,13 @@
 import type { BannerResponse, CategoryResponse, ProductResponse } from '@lorka/types';
 import { apiGet } from '@/lib/api';
 import { HeroBanner } from '@/components/hero-banner';
-import { FestivalBackdrop } from '@/components/festival-backdrop';
+import { FestivalBand } from '@/components/festival-band';
 import { TrustStrip } from '@/components/trust-strip';
 import { CategoryGrid } from '@/components/category-grid';
 import { PromoBanner } from '@/components/promo-banner';
 import { StorySection } from '@/components/story-section';
 import { ProductGrid } from '@/components/product-grid';
+import { ConciergeBand } from '@/components/concierge-band';
 
 async function safeGet<T>(path: string, fallback: T): Promise<T> {
   try {
@@ -27,19 +28,28 @@ export default async function HomePage() {
   ]);
 
   const festival = festivalBanners[0];
+  const spotlight = [...featured, ...newArrivals].find((p) => p.images.length > 0);
+  // The second category shot, so the story doesn't repeat the photo already used up top.
+  const categoryImages = categories.map((c) => c.image).filter(Boolean);
+  const storyImage = categoryImages[1] ?? categoryImages[0];
 
   return (
     <main>
-      <div className="relative isolate">
-        {festival && <FestivalBackdrop src={festival.image} />}
-        <HeroBanner banner={banners[0]} transparent={Boolean(festival)} />
-      </div>
+      <HeroBanner banner={banners[0]} spotlight={spotlight} />
       <TrustStrip />
       <CategoryGrid categories={categories} />
+      <ProductGrid
+        id="featured"
+        eyebrow="Handpicked"
+        title="Featured Pieces"
+        subtitle="Our most-loved yantras and chains, chosen for their craft and meaning."
+        products={featured}
+      />
       <PromoBanner banner={promoBanners[0]} />
-      <StorySection />
-      <ProductGrid id="featured" eyebrow="Handpicked" title="Featured Jewellery" products={featured} />
+      {festival && <FestivalBand src={festival.image} href={festival.href} title={festival.title} />}
+      <StorySection image={storyImage} />
       <ProductGrid id="new-arrivals" eyebrow="Just In" title="New Arrivals" products={newArrivals} />
+      <ConciergeBand />
     </main>
   );
 }

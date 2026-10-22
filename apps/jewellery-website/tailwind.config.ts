@@ -6,7 +6,7 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: '2rem',
+      padding: { DEFAULT: '1.25rem', sm: '2rem' },
       screens: { '2xl': '1400px' },
     },
     extend: {
@@ -49,6 +49,11 @@ const config: Config = {
           light: 'hsl(var(--gold-light))',
           foreground: 'hsl(var(--gold-foreground))',
         },
+        espresso: {
+          DEFAULT: 'hsl(var(--espresso))',
+          soft: 'hsl(var(--espresso-soft))',
+        },
+        ivory: 'hsl(var(--ivory))',
         olive: {
           DEFAULT: 'hsl(var(--olive))',
           light: 'hsl(var(--olive-light))',
@@ -61,8 +66,8 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],
-        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['var(--font-display)', 'Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+        sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       keyframes: {
         'fade-in': {

@@ -1,37 +1,66 @@
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { Reveal } from '@/components/reveal';
+import { optimizedImage } from '@/lib/image';
 
-export function StorySection() {
+const PILLARS = [
+  { title: 'Hallmarked metal', copy: 'Certified silver and gold in every piece.' },
+  { title: 'Artisan made', copy: 'Each yantra is engraved and finished by hand.' },
+  { title: 'Honest pricing', copy: 'Live metal rate plus a clear making charge.' },
+];
+
+/** Dark brand-story chapter. `image` is a lifestyle shot (a category photo works well). */
+export function StorySection({ image }: { image?: string }) {
   return (
-    <section className="container py-20">
-      <div className="grid items-center gap-12 lg:grid-cols-2">
-        <Reveal className="relative mx-auto aspect-[4/3] w-full max-w-lg overflow-hidden rounded-2xl bg-secondary lg:order-1">
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-secondary to-muted">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.7" className="h-20 w-20 text-gold/50">
-              <circle cx="9" cy="15" r="5" />
-              <path d="M14 9l6-3M14 9l6 3M14 9V4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+    <section className="relative overflow-hidden bg-espresso text-ivory">
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(50% 60% at 20% 50%, hsl(var(--gold) / 0.14) 0%, transparent 70%)' }}
+      />
+      <div className="container relative grid items-center gap-16 py-24 sm:py-32 lg:grid-cols-2 lg:gap-24">
+        <Reveal className="relative mx-auto w-full max-w-[420px]">
+          <div aria-hidden className="absolute -right-4 -top-4 bottom-4 left-4 border border-gold-light/25 sm:-right-6 sm:-top-6 sm:bottom-6 sm:left-6" />
+          <div className="relative aspect-[4/5] overflow-hidden bg-espresso-soft">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={optimizedImage(image, 900)} alt="" loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <span className="font-serif text-7xl text-gold-light/30">L</span>
+              </div>
+            )}
           </div>
         </Reveal>
 
-        <Reveal delay={100} className="text-center lg:order-2 lg:text-left">
-          <p className="text-xs font-medium uppercase tracking-[0.4em] text-gold">Our Story</p>
-          <h2 className="mt-4 text-3xl leading-tight text-foreground sm:text-4xl">
-            Crafted with Passion, Made for You
+        <Reveal delay={120} className="text-center lg:text-left">
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.35em] text-gold-light">Our Craft</p>
+          <h2 className="mt-5 text-[38px] font-light leading-[1.08] text-ivory sm:text-[52px]">
+            Every yantra, drawn <em className="font-normal italic text-gold-light">with intention.</em>
           </h2>
-          <div className="mx-auto mt-5 flex items-center justify-center gap-3 lg:mx-0 lg:justify-start">
-            <span className="h-px w-10 bg-gradient-to-r from-transparent to-gold/60" />
-            <span className="h-1.5 w-1.5 rotate-45 bg-gold" />
-          </div>
-          <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-muted-foreground lg:mx-0">
-            At Lorka Jewellers, every piece is thoughtfully designed and handcrafted by skilled artisans using
-            hallmarked silver. We believe jewellery is more than an accessory — it&apos;s a reflection of you.
+          <p className="mx-auto mt-7 max-w-lg text-[15px] font-light leading-relaxed text-ivory/70 lg:mx-0">
+            At Lorka Jewellers, sacred geometry meets fine craftsmanship. Our artisans engrave each yantra by
+            hand in hallmarked silver and gold — pieces made to be worn every day, and treasured for a lifetime.
           </p>
+
+          <dl className="mt-12 grid gap-8 border-t border-ivory/10 pt-10 text-left sm:grid-cols-3 sm:gap-6">
+            {PILLARS.map((pillar, index) => (
+              <div key={pillar.title}>
+                <dt className="flex items-baseline gap-3">
+                  <span className="font-serif text-sm italic text-gold-light">0{index + 1}</span>
+                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-ivory">{pillar.title}</span>
+                </dt>
+                <dd className="mt-2 text-sm font-light leading-relaxed text-ivory/60">{pillar.copy}</dd>
+              </div>
+            ))}
+          </dl>
+
           <Link
-            href="/#categories"
-            className="mt-8 inline-flex items-center justify-center bg-foreground px-8 py-3.5 text-xs font-medium uppercase tracking-[0.15em] text-background transition-transform duration-300 hover:scale-[1.03]"
+            href="/about"
+            className="group mt-12 inline-flex h-[52px] items-center gap-3 border border-gold-light/50 px-9 text-[11.5px] font-medium uppercase tracking-[0.22em] text-ivory transition-colors duration-300 hover:border-gold-light hover:bg-gold-light hover:text-espresso"
           >
-            Learn More
+            Discover Our Story
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={1.5} />
           </Link>
         </Reveal>
       </div>

@@ -3,123 +3,70 @@ import { ArrowRight } from 'lucide-react';
 import type { CategoryResponse } from '@lorka/types';
 import { Reveal } from '@/components/reveal';
 import { SectionHeading } from '@/components/section-heading';
-import { optimizedImage } from '@/lib/image';
+import { optimizedImage, optimizedSrcSet } from '@/lib/image';
+import { cn } from '@/lib/utils';
 
-const FALLBACK_TYPES = [
-  {
-    name: 'Necklaces',
-    icon: (
-      <>
-        <path d="M4 4c0 6 3 10 8 10s8-4 8-10" strokeLinecap="round" />
-        <circle cx="12" cy="17" r="2.4" />
-      </>
-    ),
-  },
-  {
-    name: 'Earrings',
-    icon: (
-      <>
-        <path d="M12 3v4" strokeLinecap="round" />
-        <circle cx="12" cy="9" r="2.2" />
-        <path d="M12 11.5c3 1 4 3.5 2.5 6-1 1.7-3.5 1.7-4.5 0-1-1.7 0-3.5 2-3.7" />
-      </>
-    ),
-  },
-  {
-    name: 'Rings',
-    icon: (
-      <>
-        <circle cx="12" cy="15" r="6" />
-        <path d="M9 9l3-6 3 6" strokeLinejoin="round" />
-      </>
-    ),
-  },
-  {
-    name: 'Bracelets',
-    icon: <path d="M4 12c0-4.5 3.5-8 8-8s8 3.5 8 8-3.5 8-8 8-8-3.5-8-8Z" strokeDasharray="3 3" />,
-  },
-];
-
-function CardShell({
-  href,
-  label,
-  children,
-  delay,
-}: {
-  href: string;
-  label: string;
-  children: React.ReactNode;
-  delay: number;
-}) {
-  return (
-    <Reveal delay={delay}>
-      <Link href={href} className="group block">
-        <div className="relative aspect-[3/4] overflow-hidden rounded-t-md bg-muted">{children}</div>
-        <div className="flex items-center justify-between border border-t-0 border-border bg-card px-4 py-3.5 transition-colors group-hover:border-gold/40">
-          <span className="font-serif text-sm uppercase tracking-wide text-foreground sm:text-base">{label}</span>
-          <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-gold">
-            Explore
-            <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-0.5" />
-          </span>
-        </div>
-      </Link>
-    </Reveal>
-  );
+/** Column count follows the number of categories so a short list never leaves an empty slot. */
+function gridColumns(count: number) {
+  if (count <= 2) return 'grid-cols-2 max-w-3xl';
+  if (count === 3) return 'grid-cols-2 sm:grid-cols-3 max-w-6xl';
+  return 'grid-cols-2 lg:grid-cols-4';
 }
 
 export function CategoryGrid({ categories }: { categories: CategoryResponse[] }) {
-  if (categories.length === 0) {
-    return (
-      <section id="categories" className="container py-20">
-        <Reveal>
-          <SectionHeading eyebrow="Our Collection" title="Find Your Perfect Piece" />
-        </Reveal>
-        <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-          {FALLBACK_TYPES.map((type, index) => (
-            <CardShell key={type.name} href="/#featured" label={type.name} delay={index * 70}>
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-secondary to-muted transition-transform duration-500 group-hover:scale-105">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1"
-                  className="h-14 w-14 text-gold/60"
-                >
-                  {type.icon}
-                </svg>
-              </div>
-            </CardShell>
-          ))}
-        </div>
-      </section>
-    );
-  }
+  if (categories.length === 0) return null;
 
   return (
-    <section id="categories" className="container py-20">
-      <Reveal>
-        <SectionHeading eyebrow="Our Collection" title="Find Your Perfect Piece" />
-      </Reveal>
-      <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-        {categories.map((category, index) => (
-          <CardShell
-            key={category.id}
-            href={`/categories/${category.slug}`}
-            label={category.name}
-            delay={index * 70}
-          >
-            {category.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={optimizedImage(category.image, 800)}
-                alt=""
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-secondary to-muted" />
-            )}
-          </CardShell>
-        ))}
+    <section id="categories" className="scroll-mt-24 pb-4 pt-20 sm:pt-28">
+      <div className="container">
+        <Reveal>
+          <SectionHeading
+            eyebrow="The Collections"
+            title="Shop by Category"
+            subtitle="Each piece is made to carry meaning — find the one that speaks to you."
+          />
+        </Reveal>
+
+        <div className={cn('mx-auto mt-14 grid gap-x-5 gap-y-12 sm:gap-x-8', gridColumns(categories.length))}>
+          {categories.map((category, index) => (
+            <Reveal
+              key={category.id}
+              delay={index * 90}
+              // A lone last tile in the 2-column phone layout is centred instead of left-hanging.
+              className={cn(
+                categories.length === 3 && index === 2 && 'col-span-2 mx-auto w-1/2 sm:col-span-1 sm:w-auto',
+              )}
+            >
+              <Link href={`/categories/${category.slug}`} className="group block text-center">
+                <div className="relative">
+                  <div aria-hidden className="arch absolute -inset-2 border border-gold/0 transition-colors duration-500 group-hover:border-gold/40" />
+                  <div className="arch relative aspect-[3/4] overflow-hidden bg-muted">
+                    {category.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={optimizedImage(category.image, 800)}
+                        srcSet={optimizedSrcSet(category.image, [400, 600, 800])}
+                        sizes="(min-width: 640px) 33vw, 50vw"
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-gradient-to-b from-secondary to-muted">
+                        <span className="font-serif text-5xl text-gold/40">{category.name.charAt(0)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <h3 className="mt-6 text-2xl font-normal text-foreground sm:text-[28px]">{category.name}</h3>
+                <span className="mt-2 inline-flex items-center gap-2 text-[10.5px] font-medium uppercase tracking-[0.25em] text-muted-foreground transition-colors group-hover:text-gold">
+                  Explore
+                  <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={1.5} />
+                </span>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -4,43 +4,48 @@
 
 @layer base {
   :root {
-    --background: 36 43% 97%;
-    --foreground: 0 0% 12%;
+    /* Ivory paper, espresso ink, champagne gold — the palette of the festival banner. */
+    --background: 40 33% 97%;
+    --foreground: 24 20% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 24 20% 11%;
 
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 24 20% 11%;
+    --primary-foreground: 40 33% 97%;
 
-    --secondary: 36 30% 94%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary: 38 30% 93%;
+    --secondary-foreground: 24 20% 14%;
 
-    --muted: 36 25% 93%;
-    --muted-foreground: 25 8% 42%;
+    --muted: 38 26% 94%;
+    --muted-foreground: 25 9% 40%;
 
-    --accent: 36 25% 91%;
-    --accent-foreground: 0 0% 15%;
+    --accent: 38 28% 91%;
+    --accent-foreground: 24 20% 14%;
 
-    --destructive: 0 72% 48%;
+    --destructive: 0 65% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 34 18% 87%;
-    --input: 34 18% 85%;
-    --ring: 0 0% 20%;
+    --border: 35 20% 87%;
+    --input: 35 18% 82%;
+    --ring: 36 40% 45%;
 
     --silver: 220 9% 72%;
     --silver-muted: 220 12% 90%;
 
-    --gold: 38 55% 52%;
-    --gold-light: 40 60% 68%;
-    --gold-foreground: 0 0% 8%;
+    --gold: 36 45% 44%;
+    --gold-light: 38 52% 68%;
+    --gold-foreground: 24 30% 9%;
+
+    --espresso: 24 30% 9%;
+    --espresso-soft: 25 24% 14%;
+    --ivory: 40 33% 97%;
 
     --olive: 88 15% 32%;
     --olive-light: 88 13% 40%;
     --olive-foreground: 36 43% 97%;
 
-    --radius: 0.35rem;
+    --radius: 0.25rem;
   }
 
   .dark {
@@ -74,52 +79,20 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 
-  /* Festival background (see festival-backdrop.tsx): while scrolled to the top of the homepage the
-     header goes transparent so the festival video shows through it. */
-  html[data-festival-top] .site-header {
-    background-color: transparent;
-    border-color: transparent;
-    backdrop-filter: none;
-  }
-  /* Light text over the festival video — header while at the top, and the hero. */
-  html[data-festival-top] .site-header,
-  .festival-hero {
-    --foreground: 0 0% 100%;
-    --background: 0 0% 8%;
-    --muted-foreground: 0 0% 94%;
-  }
-  /* Panels that live inside the header but have their own light background — put the normal theme
-     back so their text isn't light-on-light / dark-on-dark. */
-  html[data-festival-top] .site-header .site-dropdown,
-  html[data-festival-top] .site-header .search-overlay {
-    --foreground: 0 0% 12%;
-    --background: 36 43% 97%;
-    --muted-foreground: 25 8% 42%;
-    color: hsl(var(--foreground));
-    text-shadow: none;
-  }
-  html[data-festival-top] .site-header .search-overlay *,
-  html[data-festival-top] .site-header .site-dropdown * {
-    text-shadow: none;
-  }
-  .festival-hero h1,
-  .festival-hero p,
-  html[data-festival-top] .site-header nav,
-  html[data-festival-top] .site-header .font-serif {
-    text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
-  }
-  .festival-blur {
-    mask-image: linear-gradient(to bottom, transparent 35%, black 90%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 35%, black 90%);
-  }
-  .festival-blur-strong {
-    mask-image: linear-gradient(to bottom, transparent 65%, black 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 65%, black 100%);
-  }
   h1,
   h2,
   h3 {
-    @apply font-serif tracking-tight;
+    @apply font-serif font-medium tracking-[-0.01em];
+  }
+  /* Cormorant defaults to old-style figures, which make prices and order numbers bounce. */
+  .font-serif,
+  h1,
+  h2,
+  h3 {
+    font-variant-numeric: lining-nums;
+  }
+  ::selection {
+    background: hsl(var(--gold-light) / 0.45);
   }
 }
 
@@ -131,6 +104,7 @@
 /* Invoice printing: only the invoice itself goes on paper. */
 @media print {
   .site-header,
+  .announcement-bar,
   footer:not(article footer),
   .no-print,
   a[aria-label='Chat with us on WhatsApp'],
@@ -170,4 +144,25 @@
     transparent 70%
   );
   background-size: 200% 100%;
+}
+
+/* Arch-topped frame — a nod to temple doorways, used for hero and category imagery. */
+.arch {
+  border-top-left-radius: 999px;
+  border-top-right-radius: 999px;
+}
+
+/* Underline that draws in from the left on hover — used by nav and text links. Put `underline-trigger`
+   on a wrapper to start it from the wrapper's hover instead (a plain `.group` would also fire it from
+   the header's Shop panel). */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.link-underline:hover,
+.underline-trigger:hover .link-underline {
+  background-size: 100% 1px;
 }

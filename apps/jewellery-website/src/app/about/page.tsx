@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const VALUES = [
   { icon: Gem, title: 'Honest pricing', copy: 'Every price is the live metal value plus a clear making charge — shown on each product.' },
   { icon: HandHeart, title: 'Handcrafted', copy: 'Each piece is made by skilled artisans, and many can be crafted to order just for you.' },
-  { icon: ShieldCheck, title: 'Secure shopping', copy: 'Pay safely online through Razorpay, or choose cash on delivery.' },
+  { icon: ShieldCheck, title: 'Secure shopping', copy: 'Pay safely by UPI, or choose cash on delivery.' },
   { icon: Sparkles, title: 'Made to last', copy: 'Designs meant to be worn every day and treasured for years.' },
 ];
 

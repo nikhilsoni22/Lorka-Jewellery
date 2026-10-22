@@ -13,10 +13,8 @@ export function CartIndicator() {
       aria-label="View cart"
       className="relative inline-flex items-center text-foreground transition-colors hover:text-gold"
     >
-      <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={1.5} />
-      <span className="absolute -right-2.5 -top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-[10px] font-medium text-background">
-        {totalCount}
-      </span>
+      <ShoppingBag className="h-5 w-5" strokeWidth={1.3} />
+      {totalCount > 0 && <span className="absolute -right-2 -top-1.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-gold px-1 text-[9px] font-semibold leading-none text-ivory">{totalCount}</span>}
     </Link>
   );
 }

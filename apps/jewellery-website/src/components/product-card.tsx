@@ -5,18 +5,19 @@ import { RatingStars } from '@/components/rating-stars';
 import { WishlistButton } from '@/components/wishlist-button';
 import { optimizedImage, optimizedSrcSet } from '@/lib/image';
 import { toSavedProduct, type SavedProduct } from '@/lib/saved-product';
+import { formatPrice } from '@/lib/utils';
 
 /** Only a handful left — worth nudging the customer. */
 const LOW_STOCK = 3;
 const CARD_WIDTHS = [320, 480, 640];
 const CARD_SIZES = '(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw';
+const BADGE_CLASS = 'rounded-none px-2 py-1 text-[9.5px] font-medium uppercase tracking-[0.18em]';
 
 export function ProductCard({ product }: { product: ProductResponse }) {
   return (
     <ProductCardView
       saved={toSavedProduct(product)}
       stock={product.stock}
-      isFeatured={product.isFeatured}
       isBestseller={product.soldCount >= BESTSELLER_MIN_SOLD}
       ratingAvg={product.ratingAvg}
       ratingCount={product.ratingCount}
@@ -32,14 +33,12 @@ export function SavedProductCard({ product }: { product: SavedProduct }) {
 function ProductCardView({
   saved,
   stock,
-  isFeatured,
   isBestseller,
   ratingAvg = 0,
   ratingCount = 0,
 }: {
   saved: SavedProduct;
   stock?: number;
-  isFeatured?: boolean;
   isBestseller?: boolean;
   ratingAvg?: number;
   ratingCount?: number;
@@ -48,11 +47,8 @@ function ProductCardView({
   const offPercent = hasDiscount ? Math.round(((saved.price - saved.discountPrice!) / saved.price) * 100) : 0;
 
   return (
-    <Link
-      href={`/products/${saved.slug}`}
-      className="group block border border-border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-lg"
-    >
-      <div className="relative aspect-square overflow-hidden bg-muted">
+    <Link href={`/products/${saved.slug}`} className="group block">
+      <div className="relative aspect-square overflow-hidden bg-white ring-1 ring-inset ring-border/60">
         {saved.image ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -62,7 +58,7 @@ function ProductCardView({
               sizes={CARD_SIZES}
               alt={saved.name}
               loading="lazy"
-              className="h-full w-full object-cover transition-all duration-700 group-hover:scale-110"
+              className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
             />
             {saved.hoverImage && (
               // Second photo fades in on hover (desktop) — a quick look at another angle.
@@ -74,51 +70,53 @@ function ProductCardView({
                 alt=""
                 aria-hidden
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100"
               />
             )}
           </>
         ) : (
-          <div className="flex h-full items-center justify-center text-muted-foreground">No image</div>
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No image</div>
         )}
 
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
-          {hasDiscount && <Badge className="bg-red-600 text-white">{offPercent}% OFF</Badge>}
-          {isBestseller && <Badge className="bg-foreground text-background">Bestseller</Badge>}
-          {isFeatured && !isBestseller && <Badge className="bg-gold-gradient text-gold-foreground">Featured</Badge>}
+          {hasDiscount && <Badge className={BADGE_CLASS + ' bg-espresso text-ivory'}>−{offPercent}%</Badge>}
+          {isBestseller && <Badge className={BADGE_CLASS + ' bg-gold-light text-espresso'}>Bestseller</Badge>}
         </div>
         <WishlistButton product={saved} className="absolute right-3 top-3" />
 
         {stock === 0 && (
-          <span className="absolute inset-x-0 bottom-0 bg-foreground/85 py-1.5 text-center text-[10px] font-medium uppercase tracking-[0.15em] text-background">
-            Build to Order
+          <span className="absolute inset-x-0 bottom-0 bg-espresso/80 py-2 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-ivory backdrop-blur-sm">
+            Made to Order
           </span>
         )}
         {stock !== undefined && stock > 0 && stock <= LOW_STOCK && (
-          <span className="absolute inset-x-0 bottom-0 bg-red-600/90 py-1.5 text-center text-[10px] font-medium uppercase tracking-[0.15em] text-white">
+          <span className="absolute inset-x-0 bottom-0 bg-ivory/90 py-2 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-destructive backdrop-blur-sm">
             Only {stock} left
           </span>
         )}
       </div>
-      <div className="space-y-1 border-t border-border p-4">
-        <p className="truncate font-medium">{saved.name}</p>
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{saved.categoryName}</p>
+
+      <div className="pt-4 text-center">
+        {saved.categoryName && (
+          <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-gold">{saved.categoryName}</p>
+        )}
+        <p className="mt-1.5 line-clamp-2 font-serif text-[19px] capitalize leading-snug text-foreground">{saved.name}</p>
         {ratingCount > 0 && (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="mt-1.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <RatingStars rating={ratingAvg} className="text-[11px]" />
             <span>({ratingCount})</span>
           </p>
         )}
-        <div className="pt-1">
+        <p className="mt-2 text-sm">
           {hasDiscount ? (
             <span className="space-x-2">
-              <span className="font-serif text-lg">₹{saved.discountPrice}</span>
-              <span className="text-sm text-muted-foreground line-through">₹{saved.price}</span>
+              <span className="font-medium text-foreground">{formatPrice(saved.discountPrice!)}</span>
+              <span className="text-muted-foreground line-through">{formatPrice(saved.price)}</span>
             </span>
           ) : (
-            <span className="font-serif text-lg">₹{saved.price}</span>
+            <span className="font-medium text-foreground">{formatPrice(saved.price)}</span>
           )}
-        </div>
+        </p>
       </div>
     </Link>
   );
