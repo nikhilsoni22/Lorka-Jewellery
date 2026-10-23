@@ -148,7 +148,7 @@ export function BannerFormDialog({
                   ? {
                       fieldName: 'media',
                       accept: 'image/gif,image/webp,image/png,image/jpeg,video/mp4,video/webm',
-                      hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 20MB. Landscape (16:9) looks best.',
+                      hint: 'GIF, WEBP, PNG, JPG, MP4 or WEBM, up to 10MB. Landscape (16:9) looks best.',
                       noun: 'GIF / video',
                     }
                   : {})}

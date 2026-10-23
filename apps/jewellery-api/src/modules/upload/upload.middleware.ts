@@ -42,7 +42,8 @@ const FESTIVAL_MIME_TYPES = new Set([
 
 const festivalUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  // Cloudinary's free plan rejects images over 10MB, so cap here to fail with a clear 400.
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
     if (!FESTIVAL_MIME_TYPES.has(file.mimetype)) {
       cb(AppError.badRequest('Only GIF, WEBP, PNG, JPG, MP4 or WEBM files are allowed'));
@@ -52,7 +53,7 @@ const festivalUpload = multer({
   },
 });
 
-/** Accepts one GIF/image/video (up to 20MB) under the `media` field — for the festival overlay. */
+/** Accepts one GIF/image/video (up to 10MB) under the `media` field — for the festival overlay. */
 export function festivalMediaUpload(req: Request, res: Response, next: NextFunction): void {
   festivalUpload.single('media')(req, res, (err: unknown) => {
     if (!err) {

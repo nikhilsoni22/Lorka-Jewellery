@@ -42,9 +42,23 @@ export async function uploadImageToCloudinary(
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     logger.error({ status: res.status, body }, 'Cloudinary upload returned an error');
+    // 4xx means Cloudinary rejected the file itself (e.g. over the plan's size limit) — tell the
+    // admin why instead of a generic 500.
+    if (res.status >= 400 && res.status < 500) {
+      const message = parseCloudinaryError(body);
+      if (message) throw AppError.badRequest(message);
+    }
     throw AppError.internal('Unable to upload image. Please try again.');
   }
 
   const data = (await res.json()) as { secure_url: string };
   return data.secure_url;
+}
+
+function parseCloudinaryError(body: string): string | undefined {
+  try {
+    return (JSON.parse(body) as { error?: { message?: string } }).error?.message;
+  } catch {
+    return undefined;
+  }
 }
