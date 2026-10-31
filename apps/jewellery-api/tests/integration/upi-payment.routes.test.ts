@@ -61,6 +61,7 @@ async function placeUpiOrder(existingProductId?: string) {
     .send({
       customerName: 'Asha Verma',
       customerPhone: PHONE,
+      customerEmail: 'asha@example.com',
       shippingAddress: { line1: '12 Main Road', city: 'Jodhpur', state: 'Rajasthan', postalCode: '342001' },
       items: [{ productId, quantity: 1 }],
       paymentMethod: 'upi',
@@ -181,6 +182,7 @@ describe('UPI payments', () => {
     const body = {
       customerName: 'Asha Verma',
       customerPhone: PHONE,
+      customerEmail: 'asha@example.com',
       shippingAddress: { line1: '12 Main Road', city: 'Jodhpur', state: 'Rajasthan', postalCode: '342001' },
       items: [{ productId: product._id.toString(), quantity: 1 }],
     };

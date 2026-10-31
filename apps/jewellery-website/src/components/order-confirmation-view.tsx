@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { UpiPaymentPanel } from '@/components/upi-payment-panel';
 import { paymentMethodLabel, trackOrderHref } from '@/lib/order-tracking';
 import { useOrderLookup } from '@/lib/use-order-lookup';
+import { trackPixel } from '@/lib/meta-pixel';
 
 export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: string; phone: string }) {
   const { fetchOrder, ready } = useOrderLookup(orderNumber, phone);
@@ -24,6 +25,35 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
       cancelled = true;
     };
   }, [ready, fetchOrder]);
+
+  // Report each order once. The confirmation link can be reopened (or refreshed), and a repeat
+  // would double-count revenue; a persisted flag also covers a new tab or session.
+  const orderNumberForPixel = order?.orderNumber;
+  const orderValue = order?.total;
+  useEffect(() => {
+    if (!orderNumberForPixel || orderValue == null || !order) return;
+    const key = `lorka:pixel-purchase:${orderNumberForPixel}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
+    } catch {
+      // Storage blocked — fall through and report; a rare duplicate beats a lost sale.
+    }
+    trackPixel(
+      'Purchase',
+      {
+        content_type: 'product',
+        content_ids: order.items.map((i) => i.productId),
+        contents: order.items.map((i) => ({ id: i.productId, quantity: i.quantity, item_price: i.unitPrice })),
+        num_items: order.items.reduce((sum, i) => sum + i.quantity, 0),
+        value: orderValue,
+        currency: 'INR',
+      },
+      // Same ID the server-side Conversions API will use later, so Meta counts the sale once.
+      orderNumberForPixel,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderNumberForPixel, orderValue]);
 
   if (notFound) return <OrderNotFound />;
 

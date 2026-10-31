@@ -7,6 +7,7 @@ import { AnnouncementBar } from '@/components/announcement-bar';
 import { CartProvider } from '@/lib/cart-context';
 import { AuthProvider } from '@/lib/auth-context';
 import { NavigationProgress } from '@/components/navigation-progress';
+import { MetaPixel } from '@/components/meta-pixel';
 import { WishlistProvider } from '@/lib/wishlist-context';
 import { SiteFooter } from '@/components/site-footer';
 import { WhatsAppFloat } from '@/components/whatsapp-float';
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body suppressHydrationWarning>
+        <MetaPixel />
         <NavigationProgress />
         <AuthProvider>
           <CartProvider>

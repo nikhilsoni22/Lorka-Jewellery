@@ -11,6 +11,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { useCart, type CartItem } from '@/lib/cart-context';
 import { toSavedProduct } from '@/lib/saved-product';
 import { optimizedImage } from '@/lib/image';
+import { pixelContents, trackPixel } from '@/lib/meta-pixel';
 import { cn } from '@/lib/utils';
 
 const BUILD_ORDER_MAX_QTY = 10;
@@ -46,7 +47,21 @@ export function ProductActions({ product, whatsappHref }: { product: ProductResp
     isBuildOrder: outOfStock,
   });
 
+  useEffect(() => {
+    trackPixel('ViewContent', {
+      ...pixelContents([{ productId: product.id, quantity: 1, unitPrice: price }]),
+      content_name: product.name,
+    });
+  }, [product.id, product.name, price]);
+
+  const trackAddToCart = () =>
+    trackPixel('AddToCart', {
+      ...pixelContents([{ productId: product.id, quantity: qty, unitPrice: price }]),
+      content_name: product.name,
+    });
+
   const handleAddToCart = () => {
+    trackAddToCart();
     addItem(asCartItem(), qty);
     toast.success('Added to cart', {
       action: { label: 'View cart', onClick: () => router.push('/cart') },
@@ -54,6 +69,8 @@ export function ProductActions({ product, whatsappHref }: { product: ProductResp
   };
 
   const handleOrderNow = () => {
+    // "Order Now" skips the cart, so it counts as an add-to-cart for the ad funnel.
+    trackAddToCart();
     const item: CartItem = { ...asCartItem(), quantity: qty };
     sessionStorage.setItem('lorka:buy-now-item', JSON.stringify(item));
     router.push('/checkout?mode=buynow');

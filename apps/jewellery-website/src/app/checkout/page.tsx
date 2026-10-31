@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ import { useCart, type CartItem } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { pixelContents, trackPixel } from '@/lib/meta-pixel';
 import { FALLBACK_SETTINGS } from '@/lib/store-defaults';
 
 const inputClass =
@@ -258,13 +260,8 @@ function CheckoutForm() {
     if (fallback) setPaymentMethod(fallback);
   }, [paymentMethod, onlineEnabled, codEnabled, upiEnabled]);
 
-  useEffect(() => {
-    if (authStatus === 'unauthenticated') {
-      const redirect = isBuyNow ? '/checkout?mode=buynow' : '/checkout';
-      router.replace(`/account/login?redirect=${encodeURIComponent(redirect)}`);
-    }
-  }, [authStatus, isBuyNow, router]);
-
+  // No login redirect: guests can check out with just the details below. Signed-in customers get
+  // their name/email prefilled and the order is attached to their account.
   useEffect(() => {
     if (!user) return;
     setForm((f) => ({
@@ -277,6 +274,17 @@ function CheckoutForm() {
   const items = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cart.items;
   const subtotal = Math.round(items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0) * 100) / 100;
   const hasBuildItems = items.some((i) => i.isBuildOrder);
+
+  // Once per visit to checkout, as soon as there is something to buy.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    trackPixel('InitiateCheckout', {
+      ...pixelContents(items),
+      num_items: items.reduce((sum, i) => sum + i.quantity, 0),
+    });
+  }, [items]);
 
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState<CouponValidationResponse | null>(null);
@@ -346,7 +354,7 @@ function CheckoutForm() {
   const checkoutDetails = () => ({
     customerName: form.customerName,
     customerPhone: form.customerPhone,
-    customerEmail: form.customerEmail || undefined,
+    customerEmail: form.customerEmail,
     shippingAddress: {
       line1: form.line1,
       line2: form.line2 || undefined,
@@ -450,7 +458,8 @@ function CheckoutForm() {
     }
   };
 
-  if (!ready || authStatus === 'loading' || authStatus === 'unauthenticated') {
+  // Wait for the session check so a signed-in customer's order isn't placed as a guest order.
+  if (!ready || authStatus === 'loading') {
     return (
       <main className="container py-20">
         <div className="flex justify-center">
@@ -491,6 +500,17 @@ function CheckoutForm() {
         />
       )}
       <h1 className="text-3xl">Checkout</h1>
+      {!user && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Checking out as a guest — no account needed.{' '}
+          <Link
+            href={`/account/login?redirect=${encodeURIComponent(isBuyNow ? '/checkout?mode=buynow' : '/checkout')}`}
+            className="font-medium text-foreground underline underline-offset-2 hover:text-gold"
+          >
+            Already have an account? Log in
+          </Link>
+        </p>
+      )}
 
       <div className="mt-8 grid gap-10 lg:grid-cols-3">
         <form onSubmit={handleSubmit} className="space-y-5 lg:col-span-2">
@@ -514,13 +534,16 @@ function CheckoutForm() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Email (optional)</label>
+              <label className="text-sm font-medium">Email</label>
               <input
+                required
                 type="email"
+                autoComplete="email"
                 value={form.customerEmail}
                 onChange={updateField('customerEmail')}
                 className={cn(inputClass, 'mt-1')}
               />
+              <p className="mt-1 text-xs text-muted-foreground">Order confirmation and updates are sent here.</p>
             </div>
           </div>
 

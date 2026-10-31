@@ -64,6 +64,7 @@ beforeEach(async () => {
 const checkout = () => ({
   customerName: 'Asha Verma',
   customerPhone: '9876543210',
+  customerEmail: 'asha@example.com',
   shippingAddress: { line1: '12 Main Road', city: 'Jodhpur', state: 'Rajasthan', postalCode: '342001' },
   items: [{ productId, quantity: 1 }],
 });

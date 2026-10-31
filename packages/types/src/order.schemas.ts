@@ -43,13 +43,8 @@ export const shippingAddressSchema = z
 export const checkoutDetailsSchema = z.object({
   customerName: z.string().trim().min(2).max(120),
   customerPhone: z.string().trim().regex(/^[0-9+\-\s()]{7,20}$/, 'Invalid phone number'),
-  customerEmail: z
-    .string()
-    .trim()
-    .email()
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => (v ? v : undefined)),
+  // Required: order confirmation and every status update are emailed here.
+  customerEmail: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
   shippingAddress: shippingAddressSchema,
   items: z.array(orderItemInputSchema).min(1, 'At least one item is required').max(50),
   notes: z.string().trim().max(1000).optional().default(''),
