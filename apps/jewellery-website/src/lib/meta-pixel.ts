@@ -2,7 +2,7 @@
 // Dev/preview builds send nothing unless NEXT_PUBLIC_META_PIXEL_ID is set, so test traffic
 // doesn't pollute the real ad data.
 export const META_PIXEL_ID =
-  process.env.NEXT_PUBLIC_META_PIXEL_ID ?? (process.env.NODE_ENV === 'production' ? '2208123296418964' : '');
+  process.env.NEXT_PUBLIC_META_PIXEL_ID ?? (process.env.NODE_ENV === 'production' ? '1667903488060621' : '');
 
 declare global {
   interface Window {
