@@ -21,7 +21,7 @@ function toEntity(doc: ProductDocument): ProductEntity {
     category: doc.category.toString(),
     sku: doc.sku,
     metalType: doc.metalType as MetalType,
-    makingCharge: doc.makingCharge,
+    makingChargePerGram: doc.makingChargePerGram ?? 0,
     discountPercent: doc.discountPercent ?? undefined,
     images: doc.images,
     material: doc.material,
@@ -44,14 +44,14 @@ const SORTS: Partial<Record<NonNullable<ProductFilter['sort']>, Record<string, 1
   name_asc: { name: 1 },
 };
 
-/** Live price (weight × the admin-set metal rate + making charge) as a Mongo expression. Silver is
- * quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g). */
+/** Live price (weight × (the admin-set metal rate + making charge per gram)) as a Mongo expression.
+ * Silver is quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g). */
 function livePriceExpr(rates: MetalRates) {
   return {
-    $add: [
+    $multiply: [
+      '$weight',
       {
-        $multiply: [
-          '$weight',
+        $add: [
           {
             $cond: [
               { $eq: ['$metalType', MetalType.Gold] },
@@ -59,9 +59,9 @@ function livePriceExpr(rates: MetalRates) {
               { $divide: [rates.silverRatePerKg, 1000] },
             ],
           },
+          { $ifNull: ['$makingChargePerGram', 0] },
         ],
       },
-      '$makingCharge',
     ],
   };
 }

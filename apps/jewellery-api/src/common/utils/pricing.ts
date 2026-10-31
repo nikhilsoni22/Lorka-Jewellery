@@ -4,17 +4,22 @@ import type { MetalRates } from '../interfaces/repositories';
 
 /**
  * Live product price: weight (grams) × the admin-set per-gram rate for its metal, plus the
- * making charge. Silver is quoted per kg (1000g); gold follows the Indian convention of being
- * quoted per 10g — the two rates are NOT interchangeable units.
+ * making charge, which is also charged per gram. Silver is quoted per kg (1000g); gold follows
+ * the Indian convention of being quoted per 10g — the two rates are NOT interchangeable units.
  */
 export function computeProductPrice(
   weightGrams: number,
-  makingCharge: number,
+  makingChargePerGram: number,
   metalType: MetalType,
   rates: MetalRates,
 ): number {
   const metalCost = metalRatePerGram(metalType, rates) * weightGrams;
-  return Math.round((metalCost + makingCharge) * 100) / 100;
+  return Math.round((metalCost + computeMakingCharge(weightGrams, makingChargePerGram)) * 100) / 100;
+}
+
+/** Total making charge in rupees for a piece of this weight. */
+export function computeMakingCharge(weightGrams: number, makingChargePerGram: number): number {
+  return Math.round(weightGrams * makingChargePerGram * 100) / 100;
 }
 
 export function metalRatePerGram(metalType: MetalType, rates: MetalRates): number {

@@ -33,7 +33,8 @@ export const createProductSchema = z.object({
   category: objectId,
   sku: z.string().trim().min(1, 'SKU is required').max(60),
   metalType: z.nativeEnum(MetalType),
-  makingCharge: z.coerce.number().nonnegative('Making charge must be 0 or greater').default(0),
+  /** Rupees per gram — the making charge on a product is this × its weight. */
+  makingChargePerGram: z.coerce.number().nonnegative('Making charge must be 0 or greater').default(0),
   discountPercent: optionalDiscountPercent,
   images: z.array(z.string().trim().url('Each image must be a valid URL')).min(1, 'At least one image is required'),
   material: z.string().trim().max(80).optional().default(''),
@@ -52,7 +53,7 @@ export const updateProductSchema = z.object({
   category: objectId.optional(),
   sku: z.string().trim().min(1).max(60).optional(),
   metalType: z.nativeEnum(MetalType).optional(),
-  makingCharge: z.coerce.number().nonnegative().optional(),
+  makingChargePerGram: z.coerce.number().nonnegative().optional(),
   discountPercent: optionalDiscountPercent,
   images: z.array(z.string().trim().url('Each image must be a valid URL')).min(1).optional(),
   material: z.string().trim().max(80).optional(),

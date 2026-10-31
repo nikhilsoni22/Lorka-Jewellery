@@ -39,7 +39,7 @@ export default function EditProductPage() {
           category: product.category,
           sku: product.sku,
           metalType: product.metalType as CreateProductInput['metalType'],
-          makingCharge: product.makingCharge,
+          makingChargePerGram: product.makingChargePerGram,
           discountPercent: product.discountPercent ?? undefined,
           images: product.images,
           material: product.material,

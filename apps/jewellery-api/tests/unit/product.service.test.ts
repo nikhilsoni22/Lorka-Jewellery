@@ -21,7 +21,7 @@ const validInput = (overrides: Partial<Parameters<ProductService['create']>[0]> 
   category: '',
   sku: 'RNG-001',
   metalType: MetalType.Silver,
-  makingCharge: 200,
+  makingChargePerGram: 20,
   images: ['https://example.com/ring.jpg'],
   material: 'Sterling Silver',
   purity: '925',
@@ -146,10 +146,10 @@ describe('ProductService.delete', () => {
 });
 
 describe('live silver/gold pricing', () => {
-  it('derives price from weight × metal rate + making charge, per metal type', async () => {
+  it('derives price from weight × (metal rate + making charge per gram), per metal type', async () => {
     const category = await createCategory();
     const silverProduct = await productService.create(
-      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingCharge: 200 }),
+      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingChargePerGram: 20 }),
     );
     const goldProduct = await productService.create(
       validInput({
@@ -158,19 +158,29 @@ describe('live silver/gold pricing', () => {
         name: 'Gold Band',
         metalType: MetalType.Gold,
         weight: 5,
-        makingCharge: 500,
+        makingChargePerGram: 100,
       }),
     );
 
     // FakeSettingsRepository defaults: silverRatePerKg 80000 (=80/g), goldRatePer10g 70000 (=7000/g)
-    expect(silverProduct.price).toBe(10 * 80 + 200);
-    expect(goldProduct.price).toBe(5 * 7000 + 500);
+    expect(silverProduct.price).toBe(10 * 80 + 10 * 20);
+    expect(goldProduct.price).toBe(5 * 7000 + 5 * 100);
+  });
+
+  it('charges making per gram of weight and shows it in the price breakup', async () => {
+    const category = await createCategory();
+    const product = await productService.create(
+      validInput({ category: category.id, metalType: MetalType.Silver, weight: 6, makingChargePerGram: 60 }),
+    );
+    expect(product.makingChargePerGram).toBe(60);
+    expect(product.priceBreakup).toMatchObject({ metalValue: 6 * 80, makingChargePerGram: 60, makingCharge: 360 });
+    expect(product.price).toBe(6 * 80 + 360);
   });
 
   it('recalculates every product price the moment the admin changes the metal rate', async () => {
     const category = await createCategory();
     const product = await productService.create(
-      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingCharge: 200 }),
+      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingChargePerGram: 20 }),
     );
     expect(product.price).toBe(10 * 80 + 200);
 
@@ -204,11 +214,11 @@ describe('live silver/gold pricing', () => {
         category: category.id,
         metalType: MetalType.Silver,
         weight: 10,
-        makingCharge: 200,
+        makingChargePerGram: 20,
         discountPercent: 10,
       }),
     );
-    // price = 10 * 80 + 200 = 1000; 10% off = 900
+    // price = 10 * 80 + 10 * 20 = 1000; 10% off = 900
     expect(product.price).toBe(1000);
     expect(product.discountPrice).toBe(900);
   });

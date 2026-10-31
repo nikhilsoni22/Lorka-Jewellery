@@ -64,7 +64,7 @@ export class CheckoutPricer {
         if (!paid) throw AppError.conflict(`${product.name} only has ${product.stock} left in stock`);
         warnings.push(`${product.name}: ${item.quantity} paid for, but only ${product.stock} in stock.`);
       }
-      const livePrice = computeProductPrice(product.weight, product.makingCharge, product.metalType, rates);
+      const livePrice = computeProductPrice(product.weight, product.makingChargePerGram, product.metalType, rates);
       const unitPrice = computeDiscountedPrice(livePrice, product.discountPercent) ?? livePrice;
       return {
         productId: product.id,

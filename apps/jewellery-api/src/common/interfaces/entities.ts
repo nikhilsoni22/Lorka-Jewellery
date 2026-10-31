@@ -75,7 +75,7 @@ export interface ProductEntity {
   category: string;
   sku: string;
   metalType: MetalType;
-  makingCharge: number;
+  makingChargePerGram: number;
   discountPercent?: number | null;
   images: string[];
   material: string;

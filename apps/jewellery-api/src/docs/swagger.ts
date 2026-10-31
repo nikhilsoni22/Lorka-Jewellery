@@ -74,7 +74,7 @@ export const openApiSpec = {
           category: { type: 'string', example: '65f0c0c0c0c0c0c0c0c0c0c0' },
           sku: { type: 'string', example: 'RNG-001' },
           metalType: { type: 'string', enum: ['silver', 'gold'], example: 'silver' },
-          makingCharge: { type: 'number', example: 200 },
+          makingChargePerGram: { type: 'number', example: 60, description: 'Rupees per gram of weight' },
           discountPercent: {
             type: 'number',
             example: 15,
@@ -86,7 +86,7 @@ export const openApiSpec = {
           weight: {
             type: 'number',
             example: 4.2,
-            description: 'Grams — price is derived live as weight × the admin-set metal rate + makingCharge',
+            description: 'Grams — price is derived live as weight × (the admin-set metal rate + makingChargePerGram)',
           },
           stock: { type: 'integer', example: 25 },
           isFeatured: { type: 'boolean' },

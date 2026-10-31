@@ -54,7 +54,7 @@ beforeEach(async () => {
     sku: 'RNG-001',
     category: category._id,
     metalType: 'silver',
-    makingCharge: 200,
+    makingChargePerGram: 20,
     weight: 10,
     stock: 5,
   });

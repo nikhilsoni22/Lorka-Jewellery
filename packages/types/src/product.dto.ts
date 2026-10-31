@@ -15,8 +15,9 @@ export interface ProductResponse {
   categoryName?: string;
   sku: string;
   metalType: string;
-  makingCharge: number;
-  /** Derived live from weight × the admin-set metal rate + makingCharge — not stored. */
+  /** Rupees per gram, as entered by the admin. */
+  makingChargePerGram: number;
+  /** Derived live from weight × (the admin-set metal rate + makingChargePerGram) — not stored. */
   price: number;
   /** Offer percentage (1-100) as entered by the admin; null/undefined means no active offer. */
   discountPercent?: number | null;
@@ -44,6 +45,8 @@ export interface ProductPriceBreakup {
   /** Rate the metal value was computed from, per gram. */
   metalRatePerGram: number;
   metalValue: number;
+  makingChargePerGram: number;
+  /** weight × makingChargePerGram. */
   makingCharge: number;
   /** Rupees off from the active offer (0 when there's no offer). */
   offerDiscount: number;

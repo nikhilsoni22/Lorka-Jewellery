@@ -78,7 +78,7 @@ async function seedProduct() {
     sku: 'RNG-001',
     category: category._id,
     metalType: 'silver',
-    makingCharge: 200,
+    makingChargePerGram: 20,
     weight: 10,
     images: ['https://example.com/ring.jpg'],
     stock: 5,
@@ -175,7 +175,7 @@ describe('UPI payments', () => {
       sku: 'RNG-002',
       category: category._id,
       metalType: 'silver',
-      makingCharge: 200,
+      makingChargePerGram: 20,
       weight: 10,
       stock: 5,
     });

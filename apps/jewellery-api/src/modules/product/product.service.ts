@@ -8,14 +8,19 @@ import type {
 } from '../../common/interfaces/repositories';
 import { AppError } from '../../common/errors/app-error';
 import { generateUniqueSlug } from '../../common/utils/slugify';
-import { computeProductPrice, computeDiscountedPrice, metalRatePerGram } from '../../common/utils/pricing';
+import {
+  computeProductPrice,
+  computeDiscountedPrice,
+  computeMakingCharge,
+  metalRatePerGram,
+} from '../../common/utils/pricing';
 
 export function toProductResponse(
   product: ProductEntity,
   rates: MetalRates,
   categoryName?: string,
 ): ProductResponse {
-  const price = computeProductPrice(product.weight, product.makingCharge, product.metalType, rates);
+  const price = computeProductPrice(product.weight, product.makingChargePerGram, product.metalType, rates);
   const discountPrice = computeDiscountedPrice(price, product.discountPercent);
   const ratePerGram = metalRatePerGram(product.metalType, rates);
   return {
@@ -28,7 +33,7 @@ export function toProductResponse(
     categoryName,
     sku: product.sku,
     metalType: product.metalType,
-    makingCharge: product.makingCharge,
+    makingChargePerGram: product.makingChargePerGram,
     price,
     discountPercent: product.discountPercent ?? undefined,
     discountPrice,
@@ -42,7 +47,8 @@ export function toProductResponse(
     priceBreakup: {
       metalRatePerGram: Math.round(ratePerGram * 100) / 100,
       metalValue: Math.round(ratePerGram * product.weight * 100) / 100,
-      makingCharge: product.makingCharge,
+      makingChargePerGram: product.makingChargePerGram,
+      makingCharge: computeMakingCharge(product.weight, product.makingChargePerGram),
       offerDiscount: discountPrice !== undefined ? Math.round((price - discountPrice) * 100) / 100 : 0,
     },
     ratingAvg: product.ratingAvg ?? 0,

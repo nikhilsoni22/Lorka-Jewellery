@@ -265,8 +265,8 @@ export default function SettingsPage() {
           <CardTitle className="text-xl">Metal Rates</CardTitle>
           <CardDescription>
             Set today&apos;s rate for each metal — silver per kg, gold per 10 grams (standard
-            convention). Every product&apos;s price is calculated live as (weight in grams × rate) +
-            its making charge — changing the rate here instantly updates every product of that
+            convention). Every product&apos;s price is calculated live as weight in grams × (rate per
+            gram + its making charge per gram) — changing the rate here instantly updates every product of that
             metal, no need to edit them individually.
           </CardDescription>
         </CardHeader>

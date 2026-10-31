@@ -12,6 +12,7 @@
     "build": "tsup",
     "start": "node dist/main.js",
     "seed:admin": "tsx scripts/seed-admin.ts",
+    "migrate:making-charge": "tsx scripts/migrate-making-charge-per-gram.ts",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",

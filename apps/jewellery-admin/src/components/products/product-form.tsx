@@ -44,7 +44,7 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
       category: '',
       sku: '',
       metalType: MetalType.Silver,
-      makingCharge: 0,
+      makingChargePerGram: 0,
       images: [],
       material: '',
       purity: '',
@@ -58,7 +58,8 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
 
   const metalType = watch('metalType');
   const weight = Number(watch('weight')) || 0;
-  const makingCharge = Number(watch('makingCharge')) || 0;
+  const makingChargePerGram = Number(watch('makingChargePerGram')) || 0;
+  const makingCharge = Math.round(weight * makingChargePerGram * 100) / 100;
   const discountPercent = Number(watch('discountPercent')) || 0;
   // Silver is quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g).
   const perGramRate =
@@ -162,10 +163,22 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
             {errors.weight && <p className="text-sm text-destructive">{errors.weight.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="makingCharge">Making charge (₹)</Label>
-            <Input id="makingCharge" type="number" step="0.01" {...register('makingCharge')} />
-            {errors.makingCharge && (
-              <p className="text-sm text-destructive">{errors.makingCharge.message}</p>
+            <Label htmlFor="makingChargePerGram">Making charge (₹ per gram)</Label>
+            <Input
+              id="makingChargePerGram"
+              type="number"
+              step="0.01"
+              placeholder="e.g. 60"
+              {...register('makingChargePerGram')}
+            />
+            {errors.makingChargePerGram && (
+              <p className="text-sm text-destructive">{errors.makingChargePerGram.message}</p>
+            )}
+            {weight > 0 && makingChargePerGram > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {weight}g × ₹{makingChargePerGram.toLocaleString('en-IN')}/g = ₹
+                {makingCharge.toLocaleString('en-IN')}
+              </p>
             )}
           </div>
           <div className="space-y-2">
@@ -199,8 +212,8 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
               {livePrice !== undefined ? `₹${livePrice.toLocaleString('en-IN')}` : '—'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Weight × today&apos;s {metalType === MetalType.Gold ? 'gold' : 'silver'} rate (set in Settings) +
-              making charge. Updates automatically whenever the admin changes the metal rate.
+              Weight × (today&apos;s {metalType === MetalType.Gold ? 'gold' : 'silver'} rate (set in Settings) +
+              making charge per gram). Updates automatically whenever the admin changes the metal rate.
             </p>
           </div>
         </CardContent>

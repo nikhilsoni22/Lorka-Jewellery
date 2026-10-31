@@ -45,7 +45,7 @@ function productPayload(categoryId: string, overrides: Record<string, unknown> =
     name: 'Classic Silver Ring',
     sku: 'RNG-001',
     metalType: 'silver',
-    makingCharge: 200,
+    makingChargePerGram: 20,
     weight: 10,
     images: ['https://example.com/ring.jpg'],
     category: categoryId,
@@ -153,9 +153,9 @@ describe('PUT/DELETE /products/:id (admin only)', () => {
     const updated = await request(app)
       .put(`${base}/products/${id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ makingCharge: 300 });
+      .send({ makingChargePerGram: 30 });
     expect(updated.status).toBe(200);
-    expect(updated.body.data.makingCharge).toBe(300);
+    expect(updated.body.data.makingChargePerGram).toBe(30);
 
     const deleted = await request(app)
       .delete(`${base}/products/${id}`)
@@ -197,7 +197,7 @@ describe('PUT/DELETE /products/:id (admin only)', () => {
     const created = await request(app)
       .post(`${base}/products`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send(productPayload(categoryId, { weight: 10, makingCharge: 200 }));
+      .send(productPayload(categoryId, { weight: 10, makingChargePerGram: 20 }));
     const id = created.body.data.id;
 
     await request(app)
@@ -215,7 +215,7 @@ describe('PUT/DELETE /products/:id (admin only)', () => {
       .get(`${base}/products/${id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
-    // weight(10) * (1000/1000 per-gram) + makingCharge(200)
+    // weight(10) * (1000/1000 per-gram + makingChargePerGram(20))
     expect(res.body.data.price).toBe(210);
   });
 });

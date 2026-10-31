@@ -10,7 +10,7 @@ const productSchema = new Schema(
     category: { type: Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
     sku: { type: String, required: true, unique: true, trim: true, index: true },
     metalType: { type: String, enum: Object.values(MetalType), required: true, index: true },
-    makingCharge: { type: Number, required: true, min: 0, default: 0 },
+    makingChargePerGram: { type: Number, required: true, min: 0, default: 0 },
     discountPercent: { type: Number, default: null, min: 0, max: 100 },
     images: { type: [String], default: [] },
     material: { type: String, default: '' },

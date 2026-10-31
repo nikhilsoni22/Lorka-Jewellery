@@ -5,7 +5,7 @@ const inr = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigi
 
 /** Transparent price: live metal value + making charge − offer. Builds trust for jewellery buyers. */
 export function PriceBreakup({ product }: { product: ProductResponse }) {
-  const { metalRatePerGram, metalValue, makingCharge, offerDiscount } = product.priceBreakup;
+  const { metalRatePerGram, metalValue, makingChargePerGram, makingCharge, offerDiscount } = product.priceBreakup;
   const metal = product.metalType === 'gold' ? 'Gold' : 'Silver';
   const finalPrice = product.discountPrice ?? product.price;
 
@@ -21,7 +21,11 @@ export function PriceBreakup({ product }: { product: ProductResponse }) {
           hint={`${product.weight}g × ${inr(metalRatePerGram)}/g (today's rate)`}
           value={inr(metalValue)}
         />
-        <Row label="Making charges" value={inr(makingCharge)} />
+        <Row
+          label="Making charges"
+          hint={makingChargePerGram > 0 ? `${product.weight}g × ${inr(makingChargePerGram)}/g` : undefined}
+          value={inr(makingCharge)}
+        />
         {offerDiscount > 0 && (
           <Row label={`Offer (${product.discountPercent}% off)`} value={`−${inr(offerDiscount)}`} highlight />
         )}

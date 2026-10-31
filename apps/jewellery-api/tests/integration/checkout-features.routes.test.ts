@@ -56,7 +56,7 @@ async function seedProduct(stock = 5) {
     sku: 'RNG-001',
     category: category._id,
     metalType: 'silver',
-    makingCharge: 200,
+    makingChargePerGram: 20,
     weight: 10,
     images: ['https://example.com/ring.jpg'],
     stock,
@@ -217,7 +217,7 @@ describe('product filters', () => {
     await seedProduct();
     const inRange = await request(app).get(`${base}/products?minPrice=1000&maxPrice=1500`);
     expect(inRange.body.data).toHaveLength(1);
-    expect(inRange.body.data[0].priceBreakup).toMatchObject({ metalRatePerGram: 100, metalValue: 1000, makingCharge: 200 });
+    expect(inRange.body.data[0].priceBreakup).toMatchObject({ metalRatePerGram: 100, metalValue: 1000, makingChargePerGram: 20, makingCharge: 200 });
 
     const outOfRange = await request(app).get(`${base}/products?minPrice=2000`);
     expect(outOfRange.body.data).toHaveLength(0);
