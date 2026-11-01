@@ -67,7 +67,7 @@ export const openApiSpec = {
       },
       ProductInput: {
         type: 'object',
-        required: ['name', 'category', 'sku', 'metalType', 'weight', 'images'],
+        required: ['name', 'category', 'sku', 'metalType', 'variants', 'images'],
         properties: {
           name: { type: 'string', example: 'Classic Silver Band Ring' },
           description: { type: 'string' },
@@ -83,12 +83,21 @@ export const openApiSpec = {
           images: { type: 'array', items: { type: 'string' } },
           material: { type: 'string', example: 'Sterling Silver' },
           purity: { type: 'string', example: '925' },
-          weight: {
-            type: 'number',
-            example: 4.2,
-            description: 'Grams — price is derived live as weight × (the admin-set metal rate + makingChargePerGram)',
+          variants: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 3,
+            description:
+              'Weights the product comes in, each with its own stock. Each is priced live as weight × (the admin-set metal rate + makingChargePerGram)',
+            items: {
+              type: 'object',
+              required: ['weight'],
+              properties: {
+                weight: { type: 'number', example: 4.2, description: 'Grams' },
+                stock: { type: 'integer', example: 25 },
+              },
+            },
           },
-          stock: { type: 'integer', example: 25 },
           isFeatured: { type: 'boolean' },
           isActive: { type: 'boolean' },
         },

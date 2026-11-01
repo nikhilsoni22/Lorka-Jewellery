@@ -78,6 +78,7 @@ export function ProductTable({ products }: { products: ProductResponse[] }) {
               <TableCell className="text-muted-foreground">{product.sku}</TableCell>
               <TableCell className="text-muted-foreground">{product.categoryName ?? '—'}</TableCell>
               <TableCell>
+                {product.variants.length > 1 && <span className="text-xs text-muted-foreground">From </span>}
                 {product.discountPrice ? (
                   <span>
                     <span className="font-medium">₹{product.discountPrice}</span>{' '}
@@ -87,7 +88,14 @@ export function ProductTable({ products }: { products: ProductResponse[] }) {
                   <span>₹{product.price}</span>
                 )}
               </TableCell>
-              <TableCell>{product.stock}</TableCell>
+              <TableCell>
+                {product.variants.map((v) => (
+                  <div key={v.weight} className="whitespace-nowrap text-sm">
+                    <span className="text-muted-foreground">{v.weight}g:</span>{' '}
+                    <span className={v.stock === 0 ? 'text-destructive' : undefined}>{v.stock}</span>
+                  </div>
+                ))}
+              </TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   <Badge variant={product.isActive ? 'success' : 'muted'}>

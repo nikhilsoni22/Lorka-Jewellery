@@ -4,6 +4,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 export interface CartItem {
   productId: string;
+  /** Grams of the chosen weight. Missing on items added before products had several weights — the
+   * server then uses the product's lightest weight. */
+  weight?: number;
   slug: string;
   name: string;
   image: string;
@@ -15,11 +18,15 @@ export interface CartItem {
   isBuildOrder?: boolean;
 }
 
+/** One cart line per product *and* weight — the 16g and 25g of a design are separate lines. */
+export const cartItemKey = (item: Pick<CartItem, 'productId' | 'weight'>) => `${item.productId}:${item.weight ?? ''}`;
+
 interface CartContextValue {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  /** `key` is the line's {@link cartItemKey}. */
+  removeItem: (key: string) => void;
+  updateQuantity: (key: string, quantity: number) => void;
   clear: () => void;
   totalCount: number;
   totalPrice: number;
@@ -49,24 +56,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const addItem: CartContextValue['addItem'] = (item, quantity = 1) => {
+    const key = cartItemKey(item);
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId);
+      const existing = prev.find((i) => cartItemKey(i) === key);
       if (existing) {
         const nextQty = Math.min(existing.quantity + quantity, existing.stock);
-        return prev.map((i) => (i.productId === item.productId ? { ...i, quantity: nextQty } : i));
+        return prev.map((i) => (cartItemKey(i) === key ? { ...i, quantity: nextQty } : i));
       }
       return [...prev, { ...item, quantity: Math.min(quantity, item.stock) }];
     });
   };
 
-  const removeItem: CartContextValue['removeItem'] = (productId) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  const removeItem: CartContextValue['removeItem'] = (key) => {
+    setItems((prev) => prev.filter((i) => cartItemKey(i) !== key));
   };
 
-  const updateQuantity: CartContextValue['updateQuantity'] = (productId, quantity) => {
+  const updateQuantity: CartContextValue['updateQuantity'] = (key, quantity) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.productId === productId ? { ...i, quantity: Math.max(1, Math.min(quantity, i.stock)) } : i,
+        cartItemKey(i) === key ? { ...i, quantity: Math.max(1, Math.min(quantity, i.stock)) } : i,
       ),
     );
   };

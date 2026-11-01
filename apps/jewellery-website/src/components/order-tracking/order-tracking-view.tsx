@@ -315,7 +315,7 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
           <Card title={`Items in this order (${itemCount})`} delay={240}>
             <ul className="divide-y divide-border">
               {order.items.map((item) => (
-                <li key={`${item.productId}-${item.isBuildOrder}`} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                <li key={`${item.productId}-${item.weight}-${item.isBuildOrder}`} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
                     {item.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -329,7 +329,7 @@ export function OrderTrackingView({ orderNumber, phone }: { orderNumber: string;
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{item.name}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Qty {item.quantity} × {inr(item.unitPrice)}
+                      {item.weight ? `${item.weight}g · ` : ''}Qty {item.quantity} × {inr(item.unitPrice)}
                     </p>
                     {item.isBuildOrder && (
                       <span className="mt-1.5 inline-block rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold">

@@ -127,9 +127,10 @@ export function InvoiceView({ orderNumber, phone }: { orderNumber: string; phone
           </thead>
           <tbody>
             {order.items.map((item) => (
-              <tr key={`${item.productId}-${item.isBuildOrder}`} className="border-b border-neutral-100">
+              <tr key={`${item.productId}-${item.weight}-${item.isBuildOrder}`} className="border-b border-neutral-100">
                 <td className="py-3">
                   {item.name}
+                  {item.weight ? ` (${item.weight}g)` : ''}
                   {item.isBuildOrder && <span className="ml-2 text-xs text-neutral-500">(made to order)</span>}
                 </td>
                 <td className="py-3 text-right">{item.quantity}</td>

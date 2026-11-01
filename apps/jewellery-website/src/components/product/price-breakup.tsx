@@ -1,13 +1,18 @@
+'use client';
+
 import { ChevronDown } from 'lucide-react';
 import type { ProductResponse } from '@lorka/types';
+import { useSelectedVariant } from './selected-variant';
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
-/** Transparent price: live metal value + making charge − offer. Builds trust for jewellery buyers. */
+/** Transparent price for the selected weight: live metal value + making charge − offer. Builds
+ * trust for jewellery buyers. */
 export function PriceBreakup({ product }: { product: ProductResponse }) {
-  const { metalRatePerGram, metalValue, makingChargePerGram, makingCharge, offerDiscount } = product.priceBreakup;
+  const { variant } = useSelectedVariant();
+  const { metalRatePerGram, metalValue, makingChargePerGram, makingCharge, offerDiscount } = variant.priceBreakup;
   const metal = product.metalType === 'gold' ? 'Gold' : 'Silver';
-  const finalPrice = product.discountPrice ?? product.price;
+  const finalPrice = variant.discountPrice ?? variant.price;
 
   return (
     <details className="group rounded-lg border border-border bg-card">
@@ -18,12 +23,12 @@ export function PriceBreakup({ product }: { product: ProductResponse }) {
       <dl className="space-y-2 border-t border-border px-4 py-3 text-sm animate-fade-in">
         <Row
           label={`${metal} value`}
-          hint={`${product.weight}g × ${inr(metalRatePerGram)}/g (today's rate)`}
+          hint={`${variant.weight}g × ${inr(metalRatePerGram)}/g (today's rate)`}
           value={inr(metalValue)}
         />
         <Row
           label="Making charges"
-          hint={makingChargePerGram > 0 ? `${product.weight}g × ${inr(makingChargePerGram)}/g` : undefined}
+          hint={makingChargePerGram > 0 ? `${variant.weight}g × ${inr(makingChargePerGram)}/g` : undefined}
           value={inr(makingCharge)}
         />
         {offerDiscount > 0 && (

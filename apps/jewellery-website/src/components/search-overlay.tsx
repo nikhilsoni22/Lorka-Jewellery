@@ -7,6 +7,7 @@ import { ArrowRight, Loader2, Search, Sparkles, X } from 'lucide-react';
 import type { ApiResponse, ProductResponse } from '@lorka/types';
 import { cn } from '@/lib/utils';
 import { optimizedImage } from '@/lib/image';
+import { hasMultipleWeights } from '@/lib/product-variants';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
 const MAX_SUGGESTIONS = 6;
@@ -297,6 +298,9 @@ export function SearchOverlay({ categories }: { categories: SearchCategory[] }) 
                               </span>
                               <span className="shrink-0 text-right">
                                 <span className="block font-serif text-lg">
+                                  {hasMultipleWeights(product) && (
+                                    <span className="font-sans text-xs text-muted-foreground">From </span>
+                                  )}
                                   ₹{hasDiscount ? product.discountPrice : product.price}
                                 </span>
                                 {hasDiscount && (

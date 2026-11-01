@@ -79,9 +79,8 @@ async function seedProduct() {
     category: category._id,
     metalType: 'silver',
     makingChargePerGram: 20,
-    weight: 10,
+    variants: [{ weight: 10, stock: 5 }],
     images: ['https://example.com/ring.jpg'],
-    stock: 5,
   });
   return product._id.toString();
 }
@@ -176,8 +175,7 @@ describe('UPI payments', () => {
       category: category._id,
       metalType: 'silver',
       makingChargePerGram: 20,
-      weight: 10,
-      stock: 5,
+      variants: [{ weight: 10, stock: 5 }],
     });
     const body = {
       customerName: 'Asha Verma',
@@ -203,7 +201,7 @@ describe('UPI payments', () => {
     await submitUtr(submitted.orderNumber, '412345678901').expect(200);
     const claimed = await placeUpiOrder(unpaid.productId);
     await claimPaid(claimed.orderNumber).expect(200);
-    expect((await ProductModel.findById(unpaid.productId).lean())?.stock).toBe(2);
+    expect((await ProductModel.findById(unpaid.productId).lean())?.variants[0]?.stock).toBe(2);
 
     // Not due yet: nothing happens.
     expect(await container.orderService.cancelOverdueUpiOrders()).toBe(0);
@@ -215,7 +213,7 @@ describe('UPI payments', () => {
     expect(await OrderModel.findById(unpaid.id).lean()).toMatchObject({ status: 'cancelled' });
     expect(await OrderModel.findById(submitted.id).lean()).toMatchObject({ status: 'pending', paymentStatus: 'pending' });
     expect(await OrderModel.findById(claimed.id).lean()).toMatchObject({ status: 'pending', paymentStatus: 'pending' });
-    expect((await ProductModel.findById(unpaid.productId).lean())?.stock).toBe(3);
+    expect((await ProductModel.findById(unpaid.productId).lean())?.variants[0]?.stock).toBe(3);
     await vi.waitFor(() =>
       expect(cancelledEmail).toHaveBeenCalledWith('asha@example.com', expect.objectContaining({ orderNumber: unpaid.orderNumber })),
     );

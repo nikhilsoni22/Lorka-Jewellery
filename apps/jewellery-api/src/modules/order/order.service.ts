@@ -162,17 +162,17 @@ export class OrderService {
     const warnings = [...priced.warnings];
 
     // Reserve stock. A paid order goes through even if stock ran out — the admin is warned instead.
-    const decremented: { productId: string; quantity: number }[] = [];
+    const decremented: { productId: string; weight: number; quantity: number }[] = [];
     const releaseStock = () =>
-      Promise.all(decremented.map((d) => this.products.incrementStock(d.productId, d.quantity)));
+      Promise.all(decremented.map((d) => this.products.incrementStock(d.productId, d.weight, d.quantity)));
     for (const item of priced.items) {
       if (item.isBuildOrder) continue;
-      const ok = await this.products.decrementStock(item.productId, item.quantity);
+      const ok = await this.products.decrementStock(item.productId, item.weight, item.quantity);
       if (ok) {
-        decremented.push({ productId: item.productId, quantity: item.quantity });
+        decremented.push({ productId: item.productId, weight: item.weight, quantity: item.quantity });
       } else if (!paid) {
         await releaseStock();
-        throw AppError.conflict(`${item.name} is no longer available in the requested quantity`);
+        throw AppError.conflict(`${item.name} (${item.weight}g) is no longer available in the requested quantity`);
       }
     }
 
@@ -414,7 +414,7 @@ export class OrderService {
     await Promise.all(
       order.items
         .filter((item) => !item.isBuildOrder)
-        .map((item) => this.products.incrementStock(item.productId, item.quantity)),
+        .map((item) => this.products.incrementStock(item.productId, item.weight, item.quantity)),
     );
     if (order.couponCode) await this.coupons.release(order.couponCode);
   }

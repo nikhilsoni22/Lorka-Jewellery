@@ -1,5 +1,11 @@
-import type { ProductResponse, CreateProductInput, UpdateProductInput, ProductQuery } from '@lorka/types';
-import type { ProductEntity } from '../../common/interfaces/entities';
+import type {
+  ProductResponse,
+  ProductVariantResponse,
+  CreateProductInput,
+  UpdateProductInput,
+  ProductQuery,
+} from '@lorka/types';
+import type { ProductEntity, ProductVariantEntity } from '../../common/interfaces/entities';
 import type {
   IProductRepository,
   ICategoryRepository,
@@ -15,14 +21,37 @@ import {
   metalRatePerGram,
 } from '../../common/utils/pricing';
 
+function toVariantResponse(
+  product: ProductEntity,
+  variant: ProductVariantEntity,
+  rates: MetalRates,
+): ProductVariantResponse {
+  const price = computeProductPrice(variant.weight, product.makingChargePerGram, product.metalType, rates);
+  const discountPrice = computeDiscountedPrice(price, product.discountPercent);
+  const ratePerGram = metalRatePerGram(product.metalType, rates);
+  return {
+    weight: variant.weight,
+    stock: variant.stock,
+    price,
+    discountPrice,
+    priceBreakup: {
+      metalRatePerGram: Math.round(ratePerGram * 100) / 100,
+      metalValue: Math.round(ratePerGram * variant.weight * 100) / 100,
+      makingChargePerGram: product.makingChargePerGram,
+      makingCharge: computeMakingCharge(variant.weight, product.makingChargePerGram),
+      offerDiscount: discountPrice !== undefined ? Math.round((price - discountPrice) * 100) / 100 : 0,
+    },
+  };
+}
+
 export function toProductResponse(
   product: ProductEntity,
   rates: MetalRates,
   categoryName?: string,
 ): ProductResponse {
-  const price = computeProductPrice(product.weight, product.makingChargePerGram, product.metalType, rates);
-  const discountPrice = computeDiscountedPrice(price, product.discountPercent);
-  const ratePerGram = metalRatePerGram(product.metalType, rates);
+  const variants = product.variants.map((v) => toVariantResponse(product, v, rates));
+  // Lightest weight — the product's "from" price.
+  const base = variants[0]!;
   return {
     id: product.id,
     name: product.name,
@@ -34,23 +63,18 @@ export function toProductResponse(
     sku: product.sku,
     metalType: product.metalType,
     makingChargePerGram: product.makingChargePerGram,
-    price,
     discountPercent: product.discountPercent ?? undefined,
-    discountPrice,
+    variants,
+    weight: base.weight,
+    price: base.price,
+    discountPrice: base.discountPrice,
+    priceBreakup: base.priceBreakup,
+    stock: variants.reduce((sum, v) => sum + v.stock, 0),
     images: product.images,
     material: product.material,
     purity: product.purity,
-    weight: product.weight,
-    stock: product.stock,
     isFeatured: product.isFeatured,
     isActive: product.isActive,
-    priceBreakup: {
-      metalRatePerGram: Math.round(ratePerGram * 100) / 100,
-      metalValue: Math.round(ratePerGram * product.weight * 100) / 100,
-      makingChargePerGram: product.makingChargePerGram,
-      makingCharge: computeMakingCharge(product.weight, product.makingChargePerGram),
-      offerDiscount: discountPrice !== undefined ? Math.round((price - discountPrice) * 100) / 100 : 0,
-    },
     ratingAvg: product.ratingAvg ?? 0,
     ratingCount: product.ratingCount ?? 0,
     soldCount: product.soldCount ?? 0,

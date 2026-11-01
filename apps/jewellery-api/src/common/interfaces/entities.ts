@@ -66,6 +66,12 @@ export interface CategoryEntity {
   updatedAt: Date;
 }
 
+export interface ProductVariantEntity {
+  /** Grams. */
+  weight: number;
+  stock: number;
+}
+
 export interface ProductEntity {
   id: string;
   name: string;
@@ -80,8 +86,8 @@ export interface ProductEntity {
   images: string[];
   material: string;
   purity: string;
-  weight: number;
-  stock: number;
+  /** Lightest first; always at least one. */
+  variants: ProductVariantEntity[];
   isFeatured: boolean;
   isActive: boolean;
   /** Denormalised from visible reviews, recomputed whenever a review changes. */
@@ -96,6 +102,8 @@ export interface OrderItemEntity {
   productId: string;
   name: string;
   image: string;
+  /** Grams. Missing on orders placed before products had several weights. */
+  weight?: number;
   unitPrice: number;
   quantity: number;
   subtotal: number;

@@ -8,11 +8,18 @@ import { apiGet } from '@/lib/api';
 import { getSettings, whatsappLink } from '@/lib/store';
 import { optimizedImage } from '@/lib/image';
 import { toSavedProduct } from '@/lib/saved-product';
+import { productVariants } from '@/lib/product-variants';
 import { ProductActions } from '@/components/product-actions';
 import { ProductCard } from '@/components/product-card';
 import { RatingStars } from '@/components/rating-stars';
 import { ProductGallery } from '@/components/product/product-gallery';
 import { PriceBreakup } from '@/components/product/price-breakup';
+import {
+  SelectedVariantProvider,
+  VariantPrice,
+  VariantSpecs,
+  WeightSelector,
+} from '@/components/product/selected-variant';
 import { SizeGuide } from '@/components/product/size-guide';
 import { ProductReviews } from '@/components/product/product-reviews';
 import { RecentlyViewed } from '@/components/product/recently-viewed';
@@ -69,8 +76,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     apiGet<ProductReviewsResponse>(`/reviews/product/${product.id}?limit=20`).catch(() => EMPTY_REVIEWS),
   ]);
   const relatedProducts = related.filter((p) => p.id !== product.id).slice(0, 4);
-  const hasDiscount = Boolean(product.discountPrice && product.discountPrice < product.price);
   const price = product.discountPrice ?? product.price;
+  const variants = productVariants(product);
   const productUrl = `${SITE_URL}/products/${product.slug}`;
   const whatsappHref = whatsappLink(
     settings.storeInfo.whatsappNumber,
@@ -88,14 +95,25 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     sku: product.sku,
     brand: { '@type': 'Brand', name: 'Lorka Jewellers' },
     ...(product.material ? { material: product.material } : {}),
-    offers: {
-      '@type': 'Offer',
-      url: productUrl,
-      priceCurrency: 'INR',
-      price,
-      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
-      itemCondition: 'https://schema.org/NewCondition',
-    },
+    offers:
+      variants.length > 1
+        ? {
+            '@type': 'AggregateOffer',
+            url: productUrl,
+            priceCurrency: 'INR',
+            lowPrice: price,
+            highPrice: Math.max(...variants.map((v) => v.discountPrice ?? v.price)),
+            offerCount: variants.length,
+            availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+          }
+        : {
+            '@type': 'Offer',
+            url: productUrl,
+            priceCurrency: 'INR',
+            price,
+            availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+            itemCondition: 'https://schema.org/NewCondition',
+          },
     ...(reviews.summary.count > 0
       ? {
           aggregateRating: {
@@ -126,88 +144,71 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <div className="grid gap-10 md:grid-cols-2">
         <ProductGallery images={product.images} name={product.name} />
 
-        <div className="space-y-6">
-          <div className="animate-fade-in-up">
-            <p className="text-sm uppercase tracking-widest text-muted-foreground">
-              {product.material || product.categoryName}
-            </p>
-            <h1 className="mt-2 text-3xl sm:text-4xl">{product.name}</h1>
-            {reviews.summary.count > 0 && (
-              <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-gold">
-                <RatingStars rating={reviews.summary.average} className="text-sm" />
-                {reviews.summary.average.toFixed(1)} · {reviews.summary.count} review{reviews.summary.count !== 1 ? 's' : ''}
-              </a>
-            )}
-          </div>
-
-          <div className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
-            {hasDiscount ? (
-              <div className="flex flex-wrap items-baseline gap-3">
-                <span className="font-serif text-3xl">₹{product.discountPrice}</span>
-                <span className="text-lg text-muted-foreground line-through">₹{product.price}</span>
-                <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-sm font-medium text-red-600">
-                  {product.discountPercent}% OFF
-                </span>
-              </div>
-            ) : (
-              <span className="font-serif text-3xl">₹{product.price}</span>
-            )}
-            <p className="mt-1 text-xs text-muted-foreground">Price based on today&apos;s metal rate · inclusive of making charges</p>
-          </div>
-
-          <PriceBreakup product={product} />
-
-          {product.shortDescription && <p className="text-muted-foreground">{product.shortDescription}</p>}
-
-          <dl className="grid grid-cols-2 gap-4 border-y border-border py-4 text-sm">
-            {product.material && <Spec label="Material" value={product.material} />}
-            {product.purity && <Spec label="Purity" value={product.purity} />}
-            {product.weight != null && <Spec label="Weight" value={`${product.weight}g`} />}
-            <Spec
-              label="Availability"
-              value={
-                product.stock === 0
-                  ? 'Build to Order'
-                  : product.stock <= 3
-                    ? `Only ${product.stock} left`
-                    : 'In stock'
-              }
-              highlight={product.stock > 0 && product.stock <= 3}
-            />
-          </dl>
-
-          {kind && <SizeGuide kind={kind} whatsappHref={whatsappHref || undefined} />}
-
-          <ProductActions product={product} whatsappHref={whatsappHref || undefined} />
-
-          <ul className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/50 p-4 text-center text-xs text-muted-foreground">
-            <li className="flex flex-col items-center gap-1.5">
-              <ShieldCheck className="h-5 w-5 text-gold" strokeWidth={1.5} />
-              Secure payment
-            </li>
-            <li className="flex flex-col items-center gap-1.5">
-              {product.purity ? (
-                <BadgeCheck className="h-5 w-5 text-gold" strokeWidth={1.5} />
-              ) : (
-                <Truck className="h-5 w-5 text-gold" strokeWidth={1.5} />
+        <SelectedVariantProvider product={product}>
+          <div className="space-y-6">
+            <div className="animate-fade-in-up">
+              <p className="text-sm uppercase tracking-widest text-muted-foreground">
+                {product.material || product.categoryName}
+              </p>
+              <h1 className="mt-2 text-3xl sm:text-4xl">{product.name}</h1>
+              {reviews.summary.count > 0 && (
+                <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-gold">
+                  <RatingStars rating={reviews.summary.average} className="text-sm" />
+                  {reviews.summary.average.toFixed(1)} · {reviews.summary.count} review{reviews.summary.count !== 1 ? 's' : ''}
+                </a>
               )}
-              {product.purity ? `${product.purity} purity` : 'Live order tracking'}
-            </li>
-            <li className="flex flex-col items-center gap-1.5">
-              <RotateCcw className="h-5 w-5 text-gold" strokeWidth={1.5} />
-              <Link href="/policies/refund" className="underline-offset-2 hover:text-gold hover:underline">
-                Refund policy
-              </Link>
-            </li>
-          </ul>
-
-          {product.description && (
-            <div>
-              <h2 className="text-lg">Description</h2>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/85">{product.description}</p>
             </div>
-          )}
-        </div>
+
+            <div className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+              <VariantPrice discountPercent={product.discountPercent} />
+              <p className="mt-1 text-xs text-muted-foreground">Price based on today&apos;s metal rate · inclusive of making charges</p>
+            </div>
+
+            <WeightSelector product={product} />
+
+            <PriceBreakup product={product} />
+
+            {product.shortDescription && <p className="text-muted-foreground">{product.shortDescription}</p>}
+
+            <dl className="grid grid-cols-2 gap-4 border-y border-border py-4 text-sm">
+              {product.material && <Spec label="Material" value={product.material} />}
+              {product.purity && <Spec label="Purity" value={product.purity} />}
+              <VariantSpecs />
+            </dl>
+
+            {kind && <SizeGuide kind={kind} whatsappHref={whatsappHref || undefined} />}
+
+            <ProductActions product={product} whatsappHref={whatsappHref || undefined} />
+
+            <ul className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/50 p-4 text-center text-xs text-muted-foreground">
+              <li className="flex flex-col items-center gap-1.5">
+                <ShieldCheck className="h-5 w-5 text-gold" strokeWidth={1.5} />
+                Secure payment
+              </li>
+              <li className="flex flex-col items-center gap-1.5">
+                {product.purity ? (
+                  <BadgeCheck className="h-5 w-5 text-gold" strokeWidth={1.5} />
+                ) : (
+                  <Truck className="h-5 w-5 text-gold" strokeWidth={1.5} />
+                )}
+                {product.purity ? `${product.purity} purity` : 'Live order tracking'}
+              </li>
+              <li className="flex flex-col items-center gap-1.5">
+                <RotateCcw className="h-5 w-5 text-gold" strokeWidth={1.5} />
+                <Link href="/policies/refund" className="underline-offset-2 hover:text-gold hover:underline">
+                  Refund policy
+                </Link>
+              </li>
+            </ul>
+
+            {product.description && (
+              <div>
+                <h2 className="text-lg">Description</h2>
+                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/85">{product.description}</p>
+              </div>
+            )}
+          </div>
+        </SelectedVariantProvider>
       </div>
 
       <div className="mt-16 space-y-16">
@@ -231,11 +232,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   );
 }
 
-function Spec({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function Spec({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={highlight ? 'mt-0.5 font-medium text-red-600' : 'mt-0.5'}>{value}</dd>
+      <dd className="mt-0.5">{value}</dd>
     </div>
   );
 }

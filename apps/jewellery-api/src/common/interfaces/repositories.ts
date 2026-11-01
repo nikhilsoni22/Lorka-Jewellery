@@ -141,9 +141,10 @@ export interface IProductRepository {
   create(data: CreateProductData): Promise<ProductEntity>;
   update(id: string, data: UpdateProductData): Promise<ProductEntity | null>;
   delete(id: string): Promise<boolean>;
-  /** Atomically decrements stock only if enough is available; returns false if not. */
-  decrementStock(id: string, quantity: number): Promise<boolean>;
-  incrementStock(id: string, quantity: number): Promise<void>;
+  /** Atomically decrements one weight's stock only if enough is available; returns false if not. */
+  decrementStock(id: string, weight: number, quantity: number): Promise<boolean>;
+  /** `weight` undefined (orders from before products had several weights) → the lightest weight. */
+  incrementStock(id: string, weight: number | undefined, quantity: number): Promise<void>;
   incrementSold(id: string, quantity: number): Promise<void>;
   setRating(id: string, ratingAvg: number, ratingCount: number): Promise<void>;
 }

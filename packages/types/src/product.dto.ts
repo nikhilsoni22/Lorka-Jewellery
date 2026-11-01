@@ -17,21 +17,23 @@ export interface ProductResponse {
   metalType: string;
   /** Rupees per gram, as entered by the admin. */
   makingChargePerGram: number;
-  /** Derived live from weight × (the admin-set metal rate + makingChargePerGram) — not stored. */
-  price: number;
   /** Offer percentage (1-100) as entered by the admin; null/undefined means no active offer. */
   discountPercent?: number | null;
-  /** Derived: price after applying discountPercent. Undefined when there's no active offer. */
+  /** Every weight the product comes in, lightest first. Always at least one. */
+  variants: ProductVariantResponse[];
+  /** The lightest weight — `price`, `discountPrice` and `priceBreakup` below are for this
+   * weight, so they're the product's "from" price when it comes in more than one. */
+  weight: number;
+  price: number;
   discountPrice?: number;
+  priceBreakup: ProductPriceBreakup;
+  /** Total across every weight — 0 means none of them is in stock. */
+  stock: number;
   images: string[];
   material: string;
   purity: string;
-  weight: number;
-  stock: number;
   isFeatured: boolean;
   isActive: boolean;
-  /** Shown to customers so they can see exactly how the price is made up. */
-  priceBreakup: ProductPriceBreakup;
   /** Average of visible reviews (0 when there are none). */
   ratingAvg: number;
   ratingCount: number;
@@ -39,6 +41,18 @@ export interface ProductResponse {
   soldCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One weight a product comes in, with its own live price and stock. */
+export interface ProductVariantResponse {
+  weight: number;
+  stock: number;
+  /** Derived live from weight × (the admin-set metal rate + makingChargePerGram) — not stored. */
+  price: number;
+  /** Derived: price after applying the product's discountPercent. Undefined when there's no active offer. */
+  discountPrice?: number;
+  /** Shown to customers so they can see exactly how the price is made up. */
+  priceBreakup: ProductPriceBreakup;
 }
 
 export interface ProductPriceBreakup {

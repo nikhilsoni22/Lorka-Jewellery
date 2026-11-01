@@ -6,6 +6,8 @@ const orderItemSchema = new Schema(
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     name: { type: String, required: true },
     image: { type: String, default: '' },
+    // Grams. Missing on orders placed before products had several weights.
+    weight: { type: Number, min: 0 },
     unitPrice: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
     subtotal: { type: Number, required: true, min: 0 },

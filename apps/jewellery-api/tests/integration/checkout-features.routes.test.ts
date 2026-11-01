@@ -57,9 +57,8 @@ async function seedProduct(stock = 5) {
     category: category._id,
     metalType: 'silver',
     makingChargePerGram: 20,
-    weight: 10,
+    variants: [{ weight: 10, stock }],
     images: ['https://example.com/ring.jpg'],
-    stock,
   });
   return product._id.toString();
 }

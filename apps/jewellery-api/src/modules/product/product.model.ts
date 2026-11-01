@@ -1,6 +1,15 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 import { MetalType } from '@lorka/types';
 
+/** One weight the product comes in, stocked separately. */
+const variantSchema = new Schema(
+  {
+    weight: { type: Number, required: true, min: 0 },
+    stock: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false },
+);
+
 const productSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -15,8 +24,7 @@ const productSchema = new Schema(
     images: { type: [String], default: [] },
     material: { type: String, default: '' },
     purity: { type: String, default: '' },
-    weight: { type: Number, required: true, min: 0 },
-    stock: { type: Number, default: 0, min: 0 },
+    variants: { type: [variantSchema], default: [] },
     isFeatured: { type: Boolean, default: false, index: true },
     isActive: { type: Boolean, default: true, index: true },
     ratingAvg: { type: Number, default: 0, min: 0, max: 5 },

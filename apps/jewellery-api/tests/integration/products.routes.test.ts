@@ -46,10 +46,9 @@ function productPayload(categoryId: string, overrides: Record<string, unknown> =
     sku: 'RNG-001',
     metalType: 'silver',
     makingChargePerGram: 20,
-    weight: 10,
+    variants: [{ weight: 10, stock: 10 }],
     images: ['https://example.com/ring.jpg'],
     category: categoryId,
-    stock: 10,
     ...overrides,
   };
 }
@@ -197,7 +196,7 @@ describe('PUT/DELETE /products/:id (admin only)', () => {
     const created = await request(app)
       .post(`${base}/products`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send(productPayload(categoryId, { weight: 10, makingChargePerGram: 20 }));
+      .send(productPayload(categoryId, { makingChargePerGram: 20 }));
     const id = created.body.data.id;
 
     await request(app)

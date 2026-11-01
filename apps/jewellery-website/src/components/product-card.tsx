@@ -108,6 +108,7 @@ function ProductCardView({
           </p>
         )}
         <p className="mt-2 text-sm">
+          {saved.hasMultipleWeights && <span className="text-muted-foreground">From </span>}
           {hasDiscount ? (
             <span className="space-x-2">
               <span className="font-medium text-foreground">{formatPrice(saved.discountPrice!)}</span>

@@ -42,6 +42,7 @@ function toEntity(doc: OrderDocument): OrderEntity {
       productId: item.productId.toString(),
       name: item.name,
       image: item.image,
+      weight: item.weight ?? undefined,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       subtotal: item.subtotal,

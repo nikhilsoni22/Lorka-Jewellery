@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import type { BannerResponse, ProductResponse } from '@lorka/types';
 import { optimizedImage, optimizedSrcSet } from '@/lib/image';
+import { hasMultipleWeights } from '@/lib/product-variants';
 import { formatPrice } from '@/lib/utils';
 
 const PROMISES = ['Hallmarked metal', 'Handcrafted', 'Free prepaid shipping'];
@@ -145,7 +146,8 @@ export function HeroBanner({
               <span className="mt-1.5 flex items-end justify-between gap-6">
                 <span className="font-serif text-lg capitalize leading-tight">{spotlight.name}</span>
                 <span className="flex shrink-0 items-center gap-2 text-sm font-medium">
-                  {spotlightPrice !== undefined && formatPrice(spotlightPrice)}
+                  {spotlightPrice !== undefined &&
+                    `${hasMultipleWeights(spotlight) ? 'From ' : ''}${formatPrice(spotlightPrice)}`}
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={1.5} />
                 </span>
               </span>

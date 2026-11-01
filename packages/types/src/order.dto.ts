@@ -26,6 +26,8 @@ export interface OrderItemResponse {
   productId: string;
   name: string;
   image: string;
+  /** Grams of the weight ordered. Missing on orders placed before products had several weights. */
+  weight?: number;
   unitPrice: number;
   quantity: number;
   subtotal: number;

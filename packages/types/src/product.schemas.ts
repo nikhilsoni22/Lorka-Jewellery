@@ -25,6 +25,24 @@ const optionalDiscountPercent = z
   .transform((v) => (v === '' || v === null ? null : v))
   .optional();
 
+/** A product comes in 1 to this many weights, each priced and stocked on its own. */
+export const MAX_PRODUCT_VARIANTS = 3;
+
+export const productVariantSchema = z.object({
+  weight: z.coerce.number().positive('Weight (grams) must be greater than 0'),
+  stock: z.coerce.number().int('Stock must be a whole number').nonnegative('Stock must be 0 or greater').default(0),
+});
+
+/** Stored lightest first, so the first weight is the product's "from" price everywhere. */
+const productVariantsSchema = z
+  .array(productVariantSchema)
+  .min(1, 'Add at least one weight')
+  .max(MAX_PRODUCT_VARIANTS, `A product can have at most ${MAX_PRODUCT_VARIANTS} weights`)
+  .refine((variants) => new Set(variants.map((v) => v.weight)).size === variants.length, {
+    message: 'Each weight must be different',
+  })
+  .transform((variants) => [...variants].sort((a, b) => a.weight - b.weight));
+
 export const createProductSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(140),
   slug: z.string().trim().toLowerCase().min(2).max(160).optional(),
@@ -39,8 +57,7 @@ export const createProductSchema = z.object({
   images: z.array(z.string().trim().url('Each image must be a valid URL')).min(1, 'At least one image is required'),
   material: z.string().trim().max(80).optional().default(''),
   purity: z.string().trim().max(40).optional().default(''),
-  weight: z.coerce.number().positive('Weight (grams) must be greater than 0'),
-  stock: z.coerce.number().int().nonnegative().default(0),
+  variants: productVariantsSchema,
   isFeatured: z.boolean().optional().default(false),
   isActive: z.boolean().optional().default(true),
 });
@@ -58,8 +75,7 @@ export const updateProductSchema = z.object({
   images: z.array(z.string().trim().url('Each image must be a valid URL')).min(1).optional(),
   material: z.string().trim().max(80).optional(),
   purity: z.string().trim().max(40).optional(),
-  weight: z.coerce.number().positive().optional(),
-  stock: z.coerce.number().int().nonnegative().optional(),
+  variants: productVariantsSchema.optional(),
   isFeatured: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });

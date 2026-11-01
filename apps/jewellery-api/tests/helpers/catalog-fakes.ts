@@ -119,17 +119,24 @@ export class FakeProductRepository implements IProductRepository {
     return this.byId.delete(id);
   }
 
-  async decrementStock(id: string, quantity: number): Promise<boolean> {
+  async decrementStock(id: string, weight: number, quantity: number): Promise<boolean> {
     const existing = this.byId.get(id);
-    if (!existing || existing.stock < quantity) return false;
-    this.byId.set(id, { ...existing, stock: existing.stock - quantity });
+    const variant = existing?.variants.find((v) => v.weight === weight);
+    if (!existing || !variant || variant.stock < quantity) return false;
+    this.setStock(existing, weight, variant.stock - quantity);
     return true;
   }
 
-  async incrementStock(id: string, quantity: number): Promise<void> {
+  async incrementStock(id: string, weight: number | undefined, quantity: number): Promise<void> {
     const existing = this.byId.get(id);
-    if (!existing) return;
-    this.byId.set(id, { ...existing, stock: existing.stock + quantity });
+    const variant = weight === undefined ? existing?.variants[0] : existing?.variants.find((v) => v.weight === weight);
+    if (!existing || !variant) return;
+    this.setStock(existing, variant.weight, variant.stock + quantity);
+  }
+
+  private setStock(product: ProductEntity, weight: number, stock: number): void {
+    const variants = product.variants.map((v) => (v.weight === weight ? { ...v, stock } : v));
+    this.byId.set(product.id, { ...product, variants });
   }
 
   async incrementSold(id: string, quantity: number): Promise<void> {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/lib/cart-context';
+import { cartItemKey, useCart } from '@/lib/cart-context';
 import { optimizedImage } from '@/lib/image';
 
 export default function CartPage() {
@@ -30,7 +30,7 @@ export default function CartPage() {
       <div className="mt-8 space-y-4">
         {items.map((item) => (
           <div
-            key={item.productId}
+            key={cartItemKey(item)}
             className="flex items-center gap-4 rounded-xl border border-border bg-card p-4"
           >
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
@@ -43,13 +43,15 @@ export default function CartPage() {
               <Link href={`/products/${item.slug}`} className="font-medium hover:text-gold">
                 {item.name}
               </Link>
-              <p className="mt-1 text-sm text-muted-foreground">₹{item.unitPrice}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {item.weight ? `${item.weight}g · ` : ''}₹{item.unitPrice}
+              </p>
             </div>
             <div className="flex items-center rounded-md border border-border">
               <button
                 type="button"
                 aria-label="Decrease quantity"
-                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                onClick={() => updateQuantity(cartItemKey(item), item.quantity - 1)}
                 className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 disabled={item.quantity <= 1}
               >
@@ -59,7 +61,7 @@ export default function CartPage() {
               <button
                 type="button"
                 aria-label="Increase quantity"
-                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                onClick={() => updateQuantity(cartItemKey(item), item.quantity + 1)}
                 className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 disabled={item.quantity >= item.stock}
               >
@@ -70,7 +72,7 @@ export default function CartPage() {
             <button
               type="button"
               aria-label="Remove item"
-              onClick={() => removeItem(item.productId)}
+              onClick={() => removeItem(cartItemKey(item))}
               className="text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />

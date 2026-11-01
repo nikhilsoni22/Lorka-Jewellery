@@ -44,8 +44,7 @@ export default function EditProductPage() {
           images: product.images,
           material: product.material,
           purity: product.purity,
-          weight: product.weight,
-          stock: product.stock,
+          variants: product.variants.map(({ weight, stock }) => ({ weight, stock })),
           isFeatured: product.isFeatured,
           isActive: product.isActive,
         }}

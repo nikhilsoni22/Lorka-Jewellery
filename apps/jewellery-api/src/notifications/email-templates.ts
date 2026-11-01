@@ -66,7 +66,7 @@ function renderOrderConfirmationHtml(
     .map(
       (item) => `
         <tr>
-          <td style="padding:8px 0;border-bottom:1px solid #eee;">${item.name} × ${item.quantity}</td>
+          <td style="padding:8px 0;border-bottom:1px solid #eee;">${item.name}${item.weight ? ` (${item.weight}g)` : ''} × ${item.quantity}</td>
           <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;">₹${item.subtotal}</td>
         </tr>`,
     )

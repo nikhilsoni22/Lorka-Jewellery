@@ -165,7 +165,7 @@ export default function OrderDetailPage() {
             <div className="border-b border-border px-4 py-3 text-sm font-medium">Items</div>
             <div className="divide-y divide-border">
               {order.items.map((item) => (
-                <div key={item.productId} className="flex items-center gap-3 px-4 py-3">
+                <div key={`${item.productId}-${item.weight}-${item.isBuildOrder}`} className="flex items-center gap-3 px-4 py-3">
                   {item.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.image} alt="" className="h-12 w-12 rounded-md border border-border object-cover" />
@@ -178,7 +178,7 @@ export default function OrderDetailPage() {
                       {item.isBuildOrder && <Badge variant="outline">Build to Order</Badge>}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ₹{item.unitPrice} × {item.quantity}
+                      {item.weight ? `${item.weight}g · ` : ''}₹{item.unitPrice} × {item.quantity}
                     </p>
                   </div>
                   <p className="font-medium">₹{item.subtotal}</p>

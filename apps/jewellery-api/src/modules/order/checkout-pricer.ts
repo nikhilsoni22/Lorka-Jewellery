@@ -12,7 +12,8 @@ import type { CouponService } from '../coupon/coupon.service';
 
 export interface PricedCheckout {
   settings: SettingsEntity;
-  items: OrderItemEntity[];
+  /** New orders always record which weight was bought. */
+  items: (OrderItemEntity & { weight: number })[];
   subtotal: number;
   couponCode?: string;
   discount: number;
@@ -59,17 +60,27 @@ export class CheckoutPricer {
         if (!paid) throw AppError.badRequest('One of the selected products is no longer available');
         warnings.push(`${product.name} was hidden from the store after the customer paid.`);
       }
-      // Build-on-request items are made to order, so the current stock count doesn't gate them.
-      if (!item.isBuildOrder && product.stock < item.quantity) {
-        if (!paid) throw AppError.conflict(`${product.name} only has ${product.stock} left in stock`);
-        warnings.push(`${product.name}: ${item.quantity} paid for, but only ${product.stock} in stock.`);
+      // No weight → a cart saved before products had several weights; it meant the only one, now the lightest.
+      const weight = item.weight ?? product.variants[0]!.weight;
+      const variant = product.variants.find((v) => v.weight === weight);
+      if (!variant) {
+        if (!paid) throw AppError.badRequest(`${product.name} is no longer available in ${weight}g`);
+        warnings.push(`${product.name}: ${weight}g was paid for, but that weight was removed from the product.`);
       }
-      const livePrice = computeProductPrice(product.weight, product.makingChargePerGram, product.metalType, rates);
+      const stock = variant?.stock ?? 0;
+      // Build-on-request items are made to order, so the current stock count doesn't gate them.
+      if (!item.isBuildOrder && stock < item.quantity) {
+        if (!paid) throw AppError.conflict(`${product.name} (${weight}g) only has ${stock} left in stock`);
+        warnings.push(`${product.name} (${weight}g): ${item.quantity} paid for, but only ${stock} in stock.`);
+      }
+      // Priced from the weight itself, so a paid-for weight the admin has since removed still prices correctly.
+      const livePrice = computeProductPrice(weight, product.makingChargePerGram, product.metalType, rates);
       const unitPrice = computeDiscountedPrice(livePrice, product.discountPercent) ?? livePrice;
       return {
         productId: product.id,
         name: product.name,
         image: product.images[0] ?? '',
+        weight,
         unitPrice,
         quantity: item.quantity,
         subtotal: round2(unitPrice * item.quantity),

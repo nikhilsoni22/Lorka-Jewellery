@@ -55,8 +55,7 @@ beforeEach(async () => {
     category: category._id,
     metalType: 'silver',
     makingChargePerGram: 20,
-    weight: 10,
-    stock: 5,
+    variants: [{ weight: 10, stock: 5 }],
   });
   productId = product._id.toString();
 });

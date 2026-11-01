@@ -92,9 +92,10 @@ export function OrderConfirmationView({ orderNumber, phone }: { orderNumber: str
 
       <div className="mt-10 space-y-4 rounded-xl border border-border bg-card p-6">
         {order.items.map((item) => (
-          <div key={item.productId} className="flex justify-between text-sm">
+          <div key={`${item.productId}-${item.weight}-${item.isBuildOrder}`} className="flex justify-between text-sm">
             <span>
-              {item.name} × {item.quantity}
+              {item.name}
+              {item.weight ? ` (${item.weight}g)` : ''} × {item.quantity}
               {item.isBuildOrder && (
                 <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold">
                   Build to Order

@@ -1,5 +1,5 @@
 import { MetalType } from '@lorka/types';
-import type { ProductEntity } from '../../common/interfaces/entities';
+import type { ProductEntity, ProductVariantEntity } from '../../common/interfaces/entities';
 import type {
   IProductRepository,
   ProductFilter,
@@ -10,6 +10,14 @@ import type {
   Pagination,
 } from '../../common/interfaces/repositories';
 import { ProductModel, type ProductDocument } from './product.model';
+
+/** Products saved before they came in several weights have a single top-level `weight` + `stock`
+ * instead of `variants`; until the migration has converted them, read those as their one weight. */
+function toVariants(doc: ProductDocument): ProductVariantEntity[] {
+  if (doc.variants?.length) return doc.variants.map((v) => ({ weight: v.weight, stock: v.stock ?? 0 }));
+  const legacy = doc as unknown as { weight?: number; stock?: number };
+  return [{ weight: legacy.weight ?? 0, stock: legacy.stock ?? 0 }];
+}
 
 function toEntity(doc: ProductDocument): ProductEntity {
   return {
@@ -26,8 +34,7 @@ function toEntity(doc: ProductDocument): ProductEntity {
     images: doc.images,
     material: doc.material,
     purity: doc.purity,
-    weight: doc.weight,
-    stock: doc.stock,
+    variants: toVariants(doc),
     isFeatured: doc.isFeatured,
     isActive: doc.isActive,
     ratingAvg: doc.ratingAvg ?? 0,
@@ -44,12 +51,14 @@ const SORTS: Partial<Record<NonNullable<ProductFilter['sort']>, Record<string, 1
   name_asc: { name: 1 },
 };
 
-/** Live price (weight × (the admin-set metal rate + making charge per gram)) as a Mongo expression.
- * Silver is quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g). */
+/** Live "from" price — the lightest weight × (the admin-set metal rate + making charge per gram) —
+ * as a Mongo expression. Silver is quoted per kg (÷1000g); gold follows the Indian convention of
+ * per 10g (÷10g). */
 function livePriceExpr(rates: MetalRates) {
   return {
     $multiply: [
-      '$weight',
+      // Falls back to the old single `weight` for products the migration hasn't converted yet.
+      { $ifNull: [{ $min: '$variants.weight' }, '$weight'] },
       {
         $add: [
           {
@@ -83,7 +92,8 @@ export class ProductRepository implements IProductRepository {
       query.$or = [{ name: term }, { shortDescription: term }, { material: term }, { sku: term }];
     }
     if (filter.metalType) query.metalType = filter.metalType;
-    if (filter.inStock) query.stock = { $gt: 0 };
+    // In stock in at least one weight.
+    if (filter.inStock) query['variants.stock'] = { $gt: 0 };
 
     const skip = (pagination.page - 1) * pagination.limit;
     const sortKey = filter.sort ?? 'newest';
@@ -168,16 +178,24 @@ export class ProductRepository implements IProductRepository {
     return result !== null;
   }
 
-  async decrementStock(id: string, quantity: number): Promise<boolean> {
+  async decrementStock(id: string, weight: number, quantity: number): Promise<boolean> {
     const result = await ProductModel.findOneAndUpdate(
-      { _id: id, stock: { $gte: quantity } },
-      { $inc: { stock: -quantity } },
+      { _id: id, variants: { $elemMatch: { weight, stock: { $gte: quantity } } } },
+      { $inc: { 'variants.$.stock': -quantity } },
     ).exec();
     return result !== null;
   }
 
-  async incrementStock(id: string, quantity: number): Promise<void> {
-    await ProductModel.findByIdAndUpdate(id, { $inc: { stock: quantity } }).exec();
+  async incrementStock(id: string, weight: number | undefined, quantity: number): Promise<void> {
+    if (weight === undefined) {
+      // Orders from before products had several weights don't say which — back then each had one.
+      await ProductModel.findByIdAndUpdate(id, { $inc: { 'variants.0.stock': quantity } }).exec();
+      return;
+    }
+    await ProductModel.findOneAndUpdate(
+      { _id: id, 'variants.weight': weight },
+      { $inc: { 'variants.$.stock': quantity } },
+    ).exec();
   }
 
   async incrementSold(id: string, quantity: number): Promise<void> {

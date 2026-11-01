@@ -6,6 +6,9 @@ const objectId = z.string().trim().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 
 export const orderItemInputSchema = z.object({
   productId: objectId,
+  /** Which of the product's weights (grams). Omitted → its lightest weight (carts saved before
+   * products had more than one weight). */
+  weight: z.coerce.number().positive().optional(),
   quantity: z.coerce.number().int().positive().max(50),
   isBuildOrder: z.boolean().optional().default(false),
 });

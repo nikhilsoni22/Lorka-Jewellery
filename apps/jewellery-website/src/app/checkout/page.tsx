@@ -18,7 +18,7 @@ import {
 } from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { BlockedAccountNotice } from '@/components/blocked-account-notice';
-import { useCart, type CartItem } from '@/lib/cart-context';
+import { cartItemKey, useCart, type CartItem } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -346,6 +346,7 @@ function CheckoutForm() {
   const orderItemsPayload = () =>
     items.map((i) => ({
       productId: i.productId,
+      weight: i.weight,
       quantity: i.quantity,
       isBuildOrder: i.isBuildOrder ?? false,
     }));
@@ -760,9 +761,10 @@ function CheckoutForm() {
         <div className="space-y-4 rounded-xl border border-border bg-card p-5 h-fit">
           <h2 className="text-lg">Order Summary</h2>
           {items.map((item) => (
-            <div key={item.productId} className="flex justify-between text-sm">
+            <div key={cartItemKey(item)} className="flex justify-between text-sm">
               <span>
-                {item.name} × {item.quantity}
+                {item.name}
+                {item.weight ? ` (${item.weight}g)` : ''} × {item.quantity}
                 {item.isBuildOrder && (
                   <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold">
                     Build to Order

@@ -10,9 +10,11 @@ import { WishlistButton } from '@/components/wishlist-button';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { useCart, type CartItem } from '@/lib/cart-context';
 import { toSavedProduct } from '@/lib/saved-product';
+import { hasMultipleWeights } from '@/lib/product-variants';
 import { optimizedImage } from '@/lib/image';
 import { pixelContents, trackPixel } from '@/lib/meta-pixel';
 import { cn } from '@/lib/utils';
+import { useSelectedVariant } from '@/components/product/selected-variant';
 
 const BUILD_ORDER_MAX_QTY = 10;
 
@@ -20,9 +22,15 @@ export function ProductActions({ product, whatsappHref }: { product: ProductResp
   const [qty, setQty] = useState(1);
   const { addItem } = useCart();
   const router = useRouter();
-  const outOfStock = product.stock === 0;
-  const maxQty = outOfStock ? BUILD_ORDER_MAX_QTY : product.stock;
-  const price = product.discountPrice ?? product.price;
+  const { variant } = useSelectedVariant();
+  const outOfStock = variant.stock === 0;
+  const maxQty = outOfStock ? BUILD_ORDER_MAX_QTY : variant.stock;
+  const price = variant.discountPrice ?? variant.price;
+
+  // A different weight can have less stock than the quantity already picked.
+  useEffect(() => {
+    setQty((q) => Math.min(q, maxQty));
+  }, [maxQty]);
 
   // Show the sticky mobile bar once the main buttons scroll out of view.
   const buttonsRef = useRef<HTMLDivElement>(null);
@@ -39,20 +47,23 @@ export function ProductActions({ product, whatsappHref }: { product: ProductResp
 
   const asCartItem = (): Omit<CartItem, 'quantity'> => ({
     productId: product.id,
+    weight: variant.weight,
     slug: product.slug,
     name: product.name,
     image: product.images[0] ?? '',
     unitPrice: price,
-    stock: product.stock,
+    stock: variant.stock,
     isBuildOrder: outOfStock,
   });
 
+  // Once per product view at its "from" price — picking another weight isn't a new view.
+  const fromPrice = product.discountPrice ?? product.price;
   useEffect(() => {
     trackPixel('ViewContent', {
-      ...pixelContents([{ productId: product.id, quantity: 1, unitPrice: price }]),
+      ...pixelContents([{ productId: product.id, quantity: 1, unitPrice: fromPrice }]),
       content_name: product.name,
     });
-  }, [product.id, product.name, price]);
+  }, [product.id, product.name, fromPrice]);
 
   const trackAddToCart = () =>
     trackPixel('AddToCart', {
@@ -169,7 +180,12 @@ export function ProductActions({ product, whatsappHref }: { product: ProductResp
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{product.name}</p>
-            <p className="font-serif text-sm">₹{price}</p>
+            <p className="font-serif text-sm">
+              ₹{price}
+              {hasMultipleWeights(product) && (
+                <span className="ml-1 font-sans text-xs text-muted-foreground">· {variant.weight}g</span>
+              )}
+            </p>
           </div>
           {outOfStock ? (
             <Button onClick={handleOrderNow} className="px-4" tabIndex={showSticky ? 0 : -1}>

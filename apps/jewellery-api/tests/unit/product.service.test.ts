@@ -25,8 +25,7 @@ const validInput = (overrides: Partial<Parameters<ProductService['create']>[0]> 
   images: ['https://example.com/ring.jpg'],
   material: 'Sterling Silver',
   purity: '925',
-  weight: 10,
-  stock: 10,
+  variants: [{ weight: 10, stock: 10 }],
   isFeatured: false,
   isActive: true,
   ...overrides,
@@ -149,7 +148,7 @@ describe('live silver/gold pricing', () => {
   it('derives price from weight × (metal rate + making charge per gram), per metal type', async () => {
     const category = await createCategory();
     const silverProduct = await productService.create(
-      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingChargePerGram: 20 }),
+      validInput({ category: category.id, metalType: MetalType.Silver, variants: [{ weight: 10, stock: 10 }], makingChargePerGram: 20 }),
     );
     const goldProduct = await productService.create(
       validInput({
@@ -157,7 +156,7 @@ describe('live silver/gold pricing', () => {
         sku: 'RNG-GOLD-1',
         name: 'Gold Band',
         metalType: MetalType.Gold,
-        weight: 5,
+        variants: [{ weight: 5, stock: 10 }],
         makingChargePerGram: 100,
       }),
     );
@@ -170,7 +169,7 @@ describe('live silver/gold pricing', () => {
   it('charges making per gram of weight and shows it in the price breakup', async () => {
     const category = await createCategory();
     const product = await productService.create(
-      validInput({ category: category.id, metalType: MetalType.Silver, weight: 6, makingChargePerGram: 60 }),
+      validInput({ category: category.id, metalType: MetalType.Silver, variants: [{ weight: 6, stock: 10 }], makingChargePerGram: 60 }),
     );
     expect(product.makingChargePerGram).toBe(60);
     expect(product.priceBreakup).toMatchObject({ metalValue: 6 * 80, makingChargePerGram: 60, makingCharge: 360 });
@@ -180,7 +179,7 @@ describe('live silver/gold pricing', () => {
   it('recalculates every product price the moment the admin changes the metal rate', async () => {
     const category = await createCategory();
     const product = await productService.create(
-      validInput({ category: category.id, metalType: MetalType.Silver, weight: 10, makingChargePerGram: 20 }),
+      validInput({ category: category.id, metalType: MetalType.Silver, variants: [{ weight: 10, stock: 10 }], makingChargePerGram: 20 }),
     );
     expect(product.price).toBe(10 * 80 + 200);
 
@@ -213,7 +212,7 @@ describe('live silver/gold pricing', () => {
       validInput({
         category: category.id,
         metalType: MetalType.Silver,
-        weight: 10,
+        variants: [{ weight: 10, stock: 10 }],
         makingChargePerGram: 20,
         discountPercent: 10,
       }),

@@ -1,11 +1,17 @@
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createProductSchema, MetalType, type CreateProductInput, type ProductResponse } from '@lorka/types';
+import {
+  createProductSchema,
+  MAX_PRODUCT_VARIANTS,
+  MetalType,
+  type CreateProductInput,
+  type ProductResponse,
+} from '@lorka/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,18 +54,21 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
       images: [],
       material: '',
       purity: '',
-      weight: undefined,
-      stock: 0,
+      variants: [{ weight: undefined, stock: 0 }],
       isFeatured: false,
       isActive: true,
       ...defaultValues,
     },
   });
 
+  const { fields: variantFields, append: addVariant, remove: removeVariant } = useFieldArray({
+    control,
+    name: 'variants',
+  });
+
   const metalType = watch('metalType');
-  const weight = Number(watch('weight')) || 0;
+  const variants = watch('variants') ?? [];
   const makingChargePerGram = Number(watch('makingChargePerGram')) || 0;
-  const makingCharge = Math.round(weight * makingChargePerGram * 100) / 100;
   const discountPercent = Number(watch('discountPercent')) || 0;
   // Silver is quoted per kg (÷1000g); gold follows the Indian convention of per 10g (÷10g).
   const perGramRate =
@@ -70,12 +79,17 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
       : settings?.silverRatePerKg !== undefined
         ? settings.silverRatePerKg / 1000
         : undefined;
-  const livePrice =
-    perGramRate !== undefined ? Math.round((perGramRate * weight + makingCharge) * 100) / 100 : undefined;
-  const offerPrice =
-    livePrice !== undefined && discountPercent > 0
-      ? Math.round(livePrice * (1 - discountPercent / 100) * 100) / 100
-      : undefined;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  /** Same formula as the API, so the preview matches the price customers see. */
+  const pricePreview = (weight: number) => {
+    if (perGramRate === undefined || !(weight > 0)) return undefined;
+    const makingCharge = round2(weight * makingChargePerGram);
+    const price = round2(perGramRate * weight + makingCharge);
+    const offerPrice = discountPercent > 0 ? round2(price * (1 - discountPercent / 100)) : undefined;
+    return { makingCharge, price, offerPrice };
+  };
+  const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+  const variantsError = errors.variants?.root?.message ?? errors.variants?.message;
 
   const submit = handleSubmit(async (values) => {
     try {
@@ -158,11 +172,6 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
             {errors.metalType && <p className="text-sm text-destructive">{errors.metalType.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="weight">Weight (grams)</Label>
-            <Input id="weight" type="number" step="0.01" {...register('weight')} />
-            {errors.weight && <p className="text-sm text-destructive">{errors.weight.message}</p>}
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="makingChargePerGram">Making charge (₹ per gram)</Label>
             <Input
               id="makingChargePerGram"
@@ -173,12 +182,6 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
             />
             {errors.makingChargePerGram && (
               <p className="text-sm text-destructive">{errors.makingChargePerGram.message}</p>
-            )}
-            {weight > 0 && makingChargePerGram > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {weight}g × ₹{makingChargePerGram.toLocaleString('en-IN')}/g = ₹
-                {makingCharge.toLocaleString('en-IN')}
-              </p>
             )}
           </div>
           <div className="space-y-2">
@@ -195,26 +198,101 @@ export function ProductForm({ defaultValues, onSubmit, submitLabel }: ProductFor
             {errors.discountPercent && (
               <p className="text-sm text-destructive">{errors.discountPercent.message}</p>
             )}
-            {offerPrice !== undefined && (
-              <p className="text-xs text-muted-foreground">
-                Offer price: ₹{offerPrice.toLocaleString('en-IN')}
+          </div>
+
+          <div className="space-y-3 sm:col-span-3">
+            <div>
+              <Label>Weights, stock &amp; price</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The first weight is required; add up to {MAX_PRODUCT_VARIANTS - 1} more if this design comes in
+                other weights. Each weight has its own stock, and its price is weight × (today&apos;s{' '}
+                {metalType === MetalType.Gold ? 'gold' : 'silver'} rate (set in Settings) + making charge per gram)
+                — it updates automatically whenever the metal rate changes.
               </p>
+            </div>
+
+            {variantFields.map((field, index) => {
+              const preview = pricePreview(Number(variants[index]?.weight));
+              const fieldErrors = errors.variants?.[index];
+              return (
+                <div
+                  key={field.id}
+                  className="grid items-start gap-3 rounded-md border border-border p-3 sm:grid-cols-[1fr_1fr_1.4fr_auto]"
+                >
+                  <div className="space-y-1">
+                    <Label htmlFor={`variants.${index}.weight`} className="text-xs">
+                      Weight {index + 1} (grams){index === 0 ? '' : ' — optional'}
+                    </Label>
+                    <Input
+                      id={`variants.${index}.weight`}
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 16"
+                      {...register(`variants.${index}.weight`)}
+                    />
+                    {fieldErrors?.weight && <p className="text-sm text-destructive">{fieldErrors.weight.message}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`variants.${index}.stock`} className="text-xs">
+                      Stock
+                    </Label>
+                    <Input id={`variants.${index}.stock`} type="number" {...register(`variants.${index}.stock`)} />
+                    {fieldErrors?.stock && <p className="text-sm text-destructive">{fieldErrors.stock.message}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium">Price</span>
+                    {preview ? (
+                      <>
+                        <p className="font-medium">
+                          {preview.offerPrice !== undefined ? (
+                            <>
+                              {inr(preview.offerPrice)}{' '}
+                              <span className="text-xs text-muted-foreground line-through">{inr(preview.price)}</span>
+                            </>
+                          ) : (
+                            inr(preview.price)
+                          )}
+                        </p>
+                        {makingChargePerGram > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            incl. making {variants[index]?.weight}g × {inr(makingChargePerGram)}/g ={' '}
+                            {inr(preview.makingCharge)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="font-medium text-muted-foreground">—</p>
+                    )}
+                  </div>
+                  <div className="pt-5">
+                    {index > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Remove weight ${index + 1}`}
+                        onClick={() => removeVariant(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {variantsError && <p className="text-sm text-destructive">{variantsError}</p>}
+
+            {variantFields.length < MAX_PRODUCT_VARIANTS && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addVariant({ weight: undefined as unknown as number, stock: 0 })}
+              >
+                <Plus className="mr-1 h-4 w-4" /> Add another weight
+              </Button>
             )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="stock">Stock</Label>
-            <Input id="stock" type="number" {...register('stock')} />
-            {errors.stock && <p className="text-sm text-destructive">{errors.stock.message}</p>}
-          </div>
-          <div className="space-y-2 sm:col-span-3">
-            <Label>Calculated price</Label>
-            <p className="text-lg font-medium">
-              {livePrice !== undefined ? `₹${livePrice.toLocaleString('en-IN')}` : '—'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Weight × (today&apos;s {metalType === MetalType.Gold ? 'gold' : 'silver'} rate (set in Settings) +
-              making charge per gram). Updates automatically whenever the admin changes the metal rate.
-            </p>
           </div>
         </CardContent>
       </Card>

@@ -7,7 +7,7 @@ const base = {
   sku: 'R-1',
   metalType: 'silver',
   images: ['https://example.com/a.png'],
-  weight: 4,
+  variants: [{ weight: 4 }],
 };
 
 describe('optional offer (discountPercent)', () => {
