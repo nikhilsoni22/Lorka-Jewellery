@@ -30,6 +30,20 @@ export function SavedProductCard({ product }: { product: SavedProduct }) {
   return <ProductCardView saved={product} />;
 }
 
+/** Same shape as a card, while its live price is loading. */
+export function ProductCardSkeleton() {
+  return (
+    <div aria-hidden className="animate-pulse">
+      <div className="aspect-square bg-muted" />
+      <div className="flex flex-col items-center gap-2 pt-4">
+        <div className="h-2.5 w-16 bg-muted" />
+        <div className="h-4 w-3/4 bg-muted" />
+        <div className="h-3.5 w-20 bg-muted" />
+      </div>
+    </div>
+  );
+}
+
 function ProductCardView({
   saved,
   stock,

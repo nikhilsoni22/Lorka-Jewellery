@@ -83,7 +83,8 @@ export class ProductRepository implements IProductRepository {
     rates: MetalRates,
   ): Promise<PagedResult<ProductEntity>> {
     const query: Record<string, unknown> = {};
-    if (filter.category) query.category = filter.category;
+    // ObjectIds, not strings: the price-sort aggregation below doesn't cast like find() does.
+    if (filter.category) query.category = new Types.ObjectId(filter.category);
     if (filter.isActive !== undefined) query.isActive = filter.isActive;
     if (filter.isFeatured !== undefined) query.isFeatured = filter.isFeatured;
     if (filter.search) {
@@ -93,7 +94,6 @@ export class ProductRepository implements IProductRepository {
       query.$or = [{ name: term }, { shortDescription: term }, { material: term }, { sku: term }];
     }
     if (filter.metalType) query.metalType = filter.metalType;
-    // ObjectIds, not strings: the price-sort aggregation below doesn't cast like find() does.
     if (filter.ids) query._id = { $in: filter.ids.map((id) => new Types.ObjectId(id)) };
     // In stock in at least one weight.
     if (filter.inStock) query['variants.stock'] = { $gt: 0 };

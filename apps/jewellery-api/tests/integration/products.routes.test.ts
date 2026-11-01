@@ -83,6 +83,12 @@ describe('GET /products (public)', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].sku).toBe('RNG-001');
+
+    // Price sort and price bands run as an aggregation, which must match the category too.
+    for (const extra of [{ sort: 'price_asc' }, { sort: 'price_desc' }, { minPrice: 1 }]) {
+      const filtered = await request(app).get(`${base}/products`).query({ category: categoryId, ...extra });
+      expect(filtered.body.data.map((p: { sku: string }) => p.sku)).toEqual(['RNG-001']);
+    }
   });
 
   it('returns just the requested ids, at live prices (wishlist refresh)', async () => {
