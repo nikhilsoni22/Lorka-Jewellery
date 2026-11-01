@@ -91,4 +91,10 @@ export const productQuerySchema = paginationQuerySchema.extend({
   maxPrice: z.coerce.number().nonnegative().optional(),
   metalType: z.nativeEnum(MetalType).optional(),
   inStock: booleanQueryParam,
+  /** Comma-separated product ids — re-reads saved products (wishlist, recently viewed) at live prices. */
+  ids: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(',').map((id) => id.trim()).filter(Boolean) : undefined))
+    .pipe(z.array(objectId).max(100).optional()),
 });

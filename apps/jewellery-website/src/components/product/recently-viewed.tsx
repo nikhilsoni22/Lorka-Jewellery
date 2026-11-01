@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { SavedProductCard } from '@/components/product-card';
 import { getRecentlyViewed, rememberViewed } from '@/lib/recently-viewed';
 import type { SavedProduct } from '@/lib/saved-product';
+import { useLiveSavedProducts } from '@/lib/use-live-saved-products';
 
 /** Records this product as viewed, and shows the others the customer looked at recently. */
 export function RecentlyViewed({ current }: { current: SavedProduct }) {
-  const [items, setItems] = useState<SavedProduct[]>([]);
+  const [saved, setSaved] = useState<SavedProduct[]>([]);
+  const items = useLiveSavedProducts(saved);
 
   useEffect(() => {
-    setItems(getRecentlyViewed().filter((p) => p.id !== current.id).slice(0, 4));
+    setSaved(getRecentlyViewed().filter((p) => p.id !== current.id).slice(0, 4));
     rememberViewed(current);
     // Re-run only when moving to a different product.
     // eslint-disable-next-line react-hooks/exhaustive-deps

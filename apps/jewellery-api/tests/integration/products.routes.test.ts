@@ -84,6 +84,30 @@ describe('GET /products (public)', () => {
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].sku).toBe('RNG-001');
   });
+
+  it('returns just the requested ids, at live prices (wishlist refresh)', async () => {
+    const categoryId = await createCategory();
+    const created = await Promise.all(
+      ['RNG-001', 'RNG-002', 'RNG-003'].map((sku, i) =>
+        request(app)
+          .post(`${base}/products`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send(productPayload(categoryId, { sku, name: `Ring ${i}`, variants: [{ weight: 10 + i, stock: 1 }] })),
+      ),
+    );
+    const [first, , third] = created.map((r) => r.body.data);
+    const ids = `${first.id},${third.id}`;
+
+    const res = await request(app).get(`${base}/products`).query({ ids });
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((p: { sku: string }) => p.sku).sort()).toEqual(['RNG-001', 'RNG-003']);
+
+    // Price sorting runs as an aggregation, which must match the ids too.
+    const sorted = await request(app).get(`${base}/products`).query({ ids, sort: 'price_desc' });
+    expect(sorted.body.data.map((p: { sku: string }) => p.sku)).toEqual(['RNG-003', 'RNG-001']);
+
+    expect((await request(app).get(`${base}/products`).query({ ids: 'not-an-id' })).status).toBe(400);
+  });
 });
 
 describe('GET /products/slug/:slug (public)', () => {

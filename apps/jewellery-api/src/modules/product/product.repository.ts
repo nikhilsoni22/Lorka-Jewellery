@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { MetalType } from '@lorka/types';
 import type { ProductEntity, ProductVariantEntity } from '../../common/interfaces/entities';
 import type {
@@ -92,6 +93,8 @@ export class ProductRepository implements IProductRepository {
       query.$or = [{ name: term }, { shortDescription: term }, { material: term }, { sku: term }];
     }
     if (filter.metalType) query.metalType = filter.metalType;
+    // ObjectIds, not strings: the price-sort aggregation below doesn't cast like find() does.
+    if (filter.ids) query._id = { $in: filter.ids.map((id) => new Types.ObjectId(id)) };
     // In stock in at least one weight.
     if (filter.inStock) query['variants.stock'] = { $gt: 0 };
 

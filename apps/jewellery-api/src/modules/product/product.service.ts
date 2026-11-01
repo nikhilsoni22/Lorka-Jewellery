@@ -103,6 +103,7 @@ export class ProductService {
         maxPrice: query.maxPrice,
         metalType: query.metalType,
         inStock: query.inStock,
+        ids: query.ids,
       },
       { page: query.page, limit: query.limit },
       rates,

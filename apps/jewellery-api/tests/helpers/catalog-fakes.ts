@@ -80,6 +80,7 @@ export class FakeProductRepository implements IProductRepository {
     if (filter.isActive !== undefined) items = items.filter((p) => p.isActive === filter.isActive);
     if (filter.isFeatured !== undefined) items = items.filter((p) => p.isFeatured === filter.isFeatured);
     if (filter.search) items = items.filter((p) => p.name.toLowerCase().includes(filter.search!.toLowerCase()));
+    if (filter.ids) items = items.filter((p) => filter.ids!.includes(p.id));
     return paginate(items, pagination);
   }
 

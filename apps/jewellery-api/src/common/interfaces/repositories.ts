@@ -124,6 +124,7 @@ export interface ProductFilter {
   maxPrice?: number;
   metalType?: MetalType;
   inStock?: boolean;
+  ids?: string[];
 }
 
 /** Current admin-set metal rates, needed to sort/derive products by their live price. */

@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { useWishlist } from '@/lib/wishlist-context';
+import { useLiveSavedProducts } from '@/lib/use-live-saved-products';
 import { SavedProductCard } from '@/components/product-card';
 
 export default function WishlistPage() {
-  const { items } = useWishlist();
+  const items = useLiveSavedProducts(useWishlist().items);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
